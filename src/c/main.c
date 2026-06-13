@@ -97,6 +97,27 @@ static GFont s_font_name;    // city name, grey, UPPERCASE
   #define LAY_SIDE    22      // round: keep rows inside the circle
   #define LAY_NAME_DY 8
   #define LAY_LIST_BOTTOM 146 // round: anchor above the narrow bottom corners
+#elif defined(PBL_PLATFORM_GABBRO)   /* 260x260 round, colour, health */
+  #define HR_SCALE 1
+  #define CLK_RID   RESOURCE_ID_FONT_ARCHIVO_BOLD_68
+  #define TIME_RID  RESOURCE_ID_FONT_ARCHIVO_BOLD_28
+  #define NAME_RID  RESOURCE_ID_FONT_ARCHIVO_SEMIBOLD_16
+  #define HR_RID    RESOURCE_ID_FONT_ARCHIVO_SEMIBOLD_20
+  #define HR_RID_M  RESOURCE_ID_FONT_ARCHIVO_SEMIBOLD_28
+  #define HR_RID_L  RESOURCE_ID_FONT_ARCHIVO_SEMIBOLD_36
+  #define HEART_R     6
+  #define HEART_TRI   12
+  #define HEART_R_M   9
+  #define HEART_TRI_M 17
+  #define HEART_R_L   12
+  #define HEART_TRI_L 22
+  #define LAY_CLK_TOP 40
+  #define LAY_CLK_BOT 112
+  #define LAY_HR_MIN  24
+  #define LAY_ROW     36
+  #define LAY_SIDE    40      // round: keep rows inside the circle
+  #define LAY_NAME_DY 12
+  #define LAY_LIST_BOTTOM 222 // round: anchor above the narrow bottom corners
 #elif defined(PBL_PLATFORM_BASALT)
   #define HR_SCALE 0
   #define CLK_RID  RESOURCE_ID_FONT_ARCHIVO_BOLD_44

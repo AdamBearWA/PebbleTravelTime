@@ -2,7 +2,9 @@
   "name": "travel-time",
   "author": "AdamBearWA",
   "version": "1.0.0",
-  "keywords": ["pebble-app"],
+  "keywords": [
+    "pebble-app"
+  ],
   "private": true,
   "dependencies": {},
   "pebble": {
@@ -15,7 +17,8 @@
       "basalt",
       "chalk",
       "diorite",
-      "emery"
+      "emery",
+      "gabbro"
     ],
     "watchapp": {
       "watchface": true
@@ -44,7 +47,10 @@
           "file": "fonts/Archivo-Bold.ttf",
           "characterRegex": "[0-9:]",
           "trackingAdjust": -2,
-          "targetPlatforms": ["emery"]
+          "targetPlatforms": [
+            "emery",
+            "gabbro"
+          ]
         },
         {
           "type": "font",
@@ -52,7 +58,9 @@
           "file": "fonts/Archivo-Bold.ttf",
           "characterRegex": "[0-9:]",
           "trackingAdjust": -2,
-          "targetPlatforms": ["chalk"]
+          "targetPlatforms": [
+            "chalk"
+          ]
         },
         {
           "type": "font",
@@ -60,28 +68,37 @@
           "file": "fonts/Archivo-Bold.ttf",
           "characterRegex": "[0-9:]",
           "trackingAdjust": -1,
-          "targetPlatforms": ["basalt"]
+          "targetPlatforms": [
+            "basalt"
+          ]
         },
         {
           "type": "font",
           "name": "FONT_ARCHIVO_BOLD_28",
           "file": "fonts/Archivo-Bold.ttf",
           "characterRegex": "[0-9: +-]",
-          "targetPlatforms": ["emery"]
+          "targetPlatforms": [
+            "emery",
+            "gabbro"
+          ]
         },
         {
           "type": "font",
           "name": "FONT_ARCHIVO_BOLD_24",
           "file": "fonts/Archivo-Bold.ttf",
           "characterRegex": "[0-9: +-]",
-          "targetPlatforms": ["chalk"]
+          "targetPlatforms": [
+            "chalk"
+          ]
         },
         {
           "type": "font",
           "name": "FONT_ARCHIVO_BOLD_22",
           "file": "fonts/Archivo-Bold.ttf",
           "characterRegex": "[0-9: +-]",
-          "targetPlatforms": ["basalt"]
+          "targetPlatforms": [
+            "basalt"
+          ]
         },
         {
           "type": "font",
@@ -89,7 +106,10 @@
           "file": "fonts/Archivo-SemiBold.ttf",
           "characterRegex": "[A-Za-z .'-]",
           "trackingAdjust": 2,
-          "targetPlatforms": ["emery"]
+          "targetPlatforms": [
+            "emery",
+            "gabbro"
+          ]
         },
         {
           "type": "font",
@@ -97,7 +117,10 @@
           "file": "fonts/Archivo-SemiBold.ttf",
           "characterRegex": "[A-Za-z .'-]",
           "trackingAdjust": 0,
-          "targetPlatforms": ["basalt", "chalk"]
+          "targetPlatforms": [
+            "basalt",
+            "chalk"
+          ]
         },
         {
           "type": "font",
@@ -105,7 +128,11 @@
           "file": "fonts/Archivo-SemiBold.ttf",
           "characterRegex": "[0-9A-Za-z -]",
           "trackingAdjust": 1,
-          "targetPlatforms": ["chalk", "emery"]
+          "targetPlatforms": [
+            "chalk",
+            "emery",
+            "gabbro"
+          ]
         },
         {
           "type": "font",
@@ -113,7 +140,11 @@
           "file": "fonts/Archivo-SemiBold.ttf",
           "characterRegex": "[0-9A-Za-z -]",
           "trackingAdjust": 1,
-          "targetPlatforms": ["chalk", "emery"]
+          "targetPlatforms": [
+            "chalk",
+            "emery",
+            "gabbro"
+          ]
         },
         {
           "type": "font",
@@ -121,7 +152,11 @@
           "file": "fonts/Archivo-SemiBold.ttf",
           "characterRegex": "[0-9A-Za-z -]",
           "trackingAdjust": 1,
-          "targetPlatforms": ["chalk", "emery"]
+          "targetPlatforms": [
+            "chalk",
+            "emery",
+            "gabbro"
+          ]
         },
         {
           "type": "font",
@@ -129,7 +164,9 @@
           "file": "fonts/Archivo-SemiBold.ttf",
           "characterRegex": "[0-9A-Za-z -]",
           "trackingAdjust": 1,
-          "targetPlatforms": ["basalt"]
+          "targetPlatforms": [
+            "basalt"
+          ]
         }
       ]
     }
