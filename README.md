@@ -17,12 +17,12 @@ A world-clock watchface for the **Pebble Time 2** (and other Pebble models).
 <table>
   <tr>
     <td align="center"><img src="store/screenshots/emery.png" width="200" alt="Travel Time on emery"><br><sub><b>emery</b><br>Pebble Time 2</sub></td>
-    <td align="center"><img src="store/screenshots/gabbro.png" width="200" alt="Travel Time on gabbro"><br><sub><b>gabbro</b><br>Pebble (round, colour)</sub></td>
+    <td align="center"><img src="store/screenshots/gabbro.png" width="200" alt="Travel Time on gabbro"><br><sub><b>gabbro</b><br>Pebble Round 2</sub></td>
     <td align="center"><img src="store/screenshots/chalk.png" width="180" alt="Travel Time on chalk"><br><sub><b>chalk</b><br>Pebble Time Round</sub></td>
   </tr>
   <tr>
-    <td align="center"><img src="store/screenshots/basalt.png" width="144" alt="Travel Time on basalt"><br><sub><b>basalt</b><br>Pebble Time / Steel</sub></td>
-    <td align="center"><img src="store/screenshots/aplite.png" width="144" alt="Travel Time on aplite"><br><sub><b>aplite</b><br>Pebble / Pebble Steel</sub></td>
+    <td align="center"><img src="store/screenshots/basalt.png" width="144" alt="Travel Time on basalt"><br><sub><b>basalt</b><br>Pebble Time</sub></td>
+    <td align="center"><img src="store/screenshots/aplite.png" width="144" alt="Travel Time on aplite"><br><sub><b>aplite</b><br>Pebble Classic</sub></td>
     <td align="center"><img src="store/screenshots/diorite.png" width="144" alt="Travel Time on diorite"><br><sub><b>diorite</b><br>Pebble 2</sub></td>
   </tr>
 </table>
