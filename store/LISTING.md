@@ -59,22 +59,6 @@ zones.
 | emery   | Pebble Time 2                | `store/screenshots/emery.png`   | 200×228 |
 | gabbro  | Pebble (round, colour, 260)  | `store/screenshots/gabbro.png`  | 260×260 |
 
-## Icon / banner
-
-These are **dashboard-only** assets — `pebble publish` cannot set them on an
-existing app (icons are only sent when an app is first created, and there is no
-banner flag). Upload them at <https://developer.repebble.com/dashboard>.
-
-| Asset | Size | File |
-|---|---|---|
-| Small app icon | 80×80   | `store/icons/icon-80.png` ✅ |
-| Large app icon | 144×144 | `store/icons/icon-144.png` ✅ |
-| Banner / header | 720×320 | _TODO — to be designed_ |
-
-The icons are a generated clock face (dark face, brand-blue `#00AAFF` bezel,
-white hands). The in-launcher icon is still the bundled
-`resources/images/menu_icon.png` (25×25) from the build.
-
 ## Suggested keywords / tags
 
 travel, time zone, world clock, cities, heart rate, dual time, dst
