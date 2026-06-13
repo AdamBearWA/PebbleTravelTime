@@ -48,7 +48,14 @@ remove with a tap. City times are DST-aware and stay correct as you travel.
 Perfect for travellers, remote teams, and anyone with people in other time
 zones.
 
-## Screenshots (upload at native resolution, one per platform)
+## Screenshots
+
+**Managed in the dashboard, not via `pebble publish`.** The appstore API only
+appends uploaded screenshots (the CLI hardcodes `replaceScreenshots:false` with
+no override), so publishing them on every release duplicates them. The publish
+workflow therefore skips screenshots; upload/replace them on the dashboard.
+
+Default (blue accent) — one per platform, native resolution:
 
 | Platform | Device | File | Size |
 |---|---|---|---|
@@ -58,6 +65,11 @@ zones.
 | diorite | Pebble 2                     | `store/screenshots/diorite.png` | 144×168 |
 | emery   | Pebble Time 2                | `store/screenshots/emery.png`   | 200×228 |
 | gabbro  | Pebble (round, colour, 260)  | `store/screenshots/gabbro.png`  | 260×260 |
+
+Accent-colour variants for the **colour** platforms (basalt, chalk, emery,
+gabbro): `store/screenshots/<platform>-red.png` and `-grey.png`. The 1-bit
+models (aplite, diorite) render white-on-black with no accent, so they have no
+colour variants.
 
 ## Suggested keywords / tags
 

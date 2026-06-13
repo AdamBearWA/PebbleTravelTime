@@ -22,10 +22,6 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v8.2.0
 
-      - name: Install ffmpeg
-        # pebble publish captures GIF screenshots from the emulator, which needs ffmpeg.
-        run: sudo apt-get update -qq && sudo apt-get install -y ffmpeg
-
       - name: Install Pebble CLI + SDK
         run: |
           uv tool install pebble-tool
@@ -33,17 +29,6 @@ jobs:
 
       - name: Build
         run: pebble build
-
-      - name: Stage screenshots
-        # pebble publish infers each screenshot's platform from the filename
-        # before the first underscore, so copy our native-size PNGs to
-        # <platform>_*.png names. These are exact appstore dimensions, unlike
-        # the emulator's auto-capture (which is rejected as the wrong size).
-        run: |
-          mkdir -p /tmp/shots
-          for p in aplite basalt chalk diorite emery gabbro; do
-            cp "store/screenshots/$p.png" "/tmp/shots/${p}_screenshot.png"
-          done
 
       - name: Publish
         env:
@@ -66,11 +51,15 @@ jobs:
           fi
           echo "::add-mask::$ID_TOKEN"
           export PEBBLE_FIREBASE_ID_TOKEN="$ID_TOKEN"
-          # --description only takes effect when the app is first created (it is
-          # ignored once the app exists; edit the live description in the
-          # dashboard). --release-notes is this version's changelog.
+          # Screenshots are NOT uploaded here: the appstore API only ever APPENDS
+          # uploaded screenshots (replaceScreenshots is hardcoded false in the CLI
+          # with no flag to change it), so every publish would add another copy
+          # per device. For an existing app screenshots are optional, so we skip
+          # them (--no-gif-all-platforms + no --screenshots) and manage the
+          # gallery in the dashboard instead. --description only applies on first
+          # app creation; --release-notes is this version's changelog.
           pebble publish --non-interactive \
+            --no-gif-all-platforms \
             --description "Shows local time and heart bpm as well as the time in up to 5 other cities" \
             --release-notes "$RELEASE_NOTES" \
-            --source "https://github.com/AdamBearWA/PebbleTravelTime" \
-            --screenshots /tmp/shots/*.png
+            --source "https://github.com/AdamBearWA/PebbleTravelTime"
