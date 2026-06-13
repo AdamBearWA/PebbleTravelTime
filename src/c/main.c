@@ -26,7 +26,6 @@
 
 static Window *s_window;
 static Layer  *s_canvas;
-static GPath  *s_heart_path = NULL;
 
 // "01b · Quiet in colour": the single brand-blue accent (matched to the owner's
 // blue watch band). Snaps to GColorVividCerulean on the 64-colour models; falls
@@ -35,94 +34,115 @@ static GPath  *s_heart_path = NULL;
 #define GREY_COLOR   PBL_IF_COLOR_ELSE(GColorLightGray, GColorWhite)
 
 // Custom Archivo fonts (bundled on the colour models only -- see package.json).
-// On aplite/diorite these hold system-font fallbacks instead.
-static GFont s_font_clock;   // Archivo Bold 68    (clock)
-static GFont s_font_time;    // Archivo Bold 28    (city time, accent)
-static GFont s_font_name;    // Archivo SemiBold 16 (city name, grey, UPPER)
-static GFont s_font_hr;      // Archivo SemiBold 20 (heart-rate line, grey)
+// On aplite/diorite these hold system-font fallbacks instead. The heart-rate
+// font is an array, one per scaling tier (see s_hr[] below).
+static GFont s_font_clock;   // clock
+static GFont s_font_time;    // city time, accent
+static GFont s_font_name;    // city name, grey, UPPERCASE
 
-// --- Per-platform type sizes, layout metrics, and heart size ---------------
-// emery (200x228) is the design reference. The smaller rectangular models
-// (basalt/aplite/diorite, 144x168) and the round chalk (180x180) get scaled-
-// down fonts, compressed vertical spacing, and -- on chalk -- a wider side
-// inset plus top-anchoring so the rows stay inside the circle. Positions are
-// still combined with layer_get_bounds() at draw time so the bottom-anchored
-// list keys off the real screen height.
+// --- Per-platform type sizes, layout metrics, heart size, HR scaling -------
+// emery (200x228) is the design reference; basalt/aplite/diorite (144x168) and
+// round chalk (180x180) get scaled-down fonts and compressed spacing. On emery
+// and chalk the heart-rate line ALSO grows when fewer cities are shown (more
+// free space): three tiers, picked at draw time, with the divider floating up
+// to the shortened, bottom-anchored list. Positions combine with
+// layer_get_bounds() at draw time.
 //
-//   *_RID    : bundled Archivo font resource per role (colour models only)
-//   LAY_*    : layout metrics in px (clock top, HR line, divider, row pitch,
-//              side margin, bottom margin, name baseline nudge, top-anchor flag)
-//   HEART_R  : lobe radius;  HEART_TRI : triangle-tip depth below the lobe line
+//   *_RID       : bundled Archivo resource per role (colour models)
+//   HR_RID_M/L  : medium / large heart-rate fonts for the scaling tiers
+//   HEART_*_M/L : medium / large heart lobe radius & triangle-tip depth
+//   LAY_LIST_BOTTOM : y the city list bottom-anchors to (screen bottom, or
+//                     higher on round so rows clear the narrow corners)
+//   HR_SCALE platforms use LAY_CLK_BOT (clock-zone bottom) + LAY_HR_MIN
+//   (smallest HR-zone height); the others use fixed LAY_HR_TOP/LAY_DIV_Y/CAP.
 #if defined(PBL_PLATFORM_EMERY)
-  #define CLK_RID  RESOURCE_ID_FONT_ARCHIVO_BOLD_68
-  #define TIME_RID RESOURCE_ID_FONT_ARCHIVO_BOLD_28
-  #define NAME_RID RESOURCE_ID_FONT_ARCHIVO_SEMIBOLD_16
-  #define HR_RID   RESOURCE_ID_FONT_ARCHIVO_SEMIBOLD_20
-  #define LAY_CLK_TOP 8
-  #define LAY_HR_TOP  78
-  #define LAY_HR_CAP  10
-  #define LAY_DIV_Y   112
-  #define LAY_ROW     34
-  #define LAY_SIDE    8
-  #define LAY_BOT     8
-  #define LAY_NAME_DY 11
-  #define LAY_TOPANCHOR 0
+  #define HR_SCALE 1
+  #define CLK_RID   RESOURCE_ID_FONT_ARCHIVO_BOLD_68
+  #define TIME_RID  RESOURCE_ID_FONT_ARCHIVO_BOLD_28
+  #define NAME_RID  RESOURCE_ID_FONT_ARCHIVO_SEMIBOLD_16
+  #define HR_RID    RESOURCE_ID_FONT_ARCHIVO_SEMIBOLD_20
+  #define HR_RID_M  RESOURCE_ID_FONT_ARCHIVO_SEMIBOLD_28
+  #define HR_RID_L  RESOURCE_ID_FONT_ARCHIVO_SEMIBOLD_36
   #define HEART_R     6
   #define HEART_TRI   12
-#elif defined(PBL_PLATFORM_CHALK)
-  #define CLK_RID  RESOURCE_ID_FONT_ARCHIVO_BOLD_54
-  #define TIME_RID RESOURCE_ID_FONT_ARCHIVO_BOLD_24
-  #define NAME_RID RESOURCE_ID_FONT_ARCHIVO_SEMIBOLD_14
-  #define HR_RID   RESOURCE_ID_FONT_ARCHIVO_SEMIBOLD_20
+  #define HEART_R_M   9
+  #define HEART_TRI_M 17
+  #define HEART_R_L   12
+  #define HEART_TRI_L 22
   #define LAY_CLK_TOP 8
-  #define LAY_HR_TOP  64
-  #define LAY_HR_CAP  10
-  #define LAY_DIV_Y   92
-  #define LAY_ROW     28
-  #define LAY_SIDE    20      // round: keep rows inside the circle
-  #define LAY_BOT     14
-  #define LAY_NAME_DY 8
-  #define LAY_TOPANCHOR 1     // round: top-anchor in the wide middle band
+  #define LAY_CLK_BOT 76
+  #define LAY_HR_MIN  30
+  #define LAY_ROW     34
+  #define LAY_SIDE    8
+  #define LAY_NAME_DY 11
+  #define LAY_LIST_BOTTOM 220
+#elif defined(PBL_PLATFORM_CHALK)
+  #define HR_SCALE 1
+  #define CLK_RID   RESOURCE_ID_FONT_ARCHIVO_BOLD_54
+  #define TIME_RID  RESOURCE_ID_FONT_ARCHIVO_BOLD_24
+  #define NAME_RID  RESOURCE_ID_FONT_ARCHIVO_SEMIBOLD_14
+  #define HR_RID    RESOURCE_ID_FONT_ARCHIVO_SEMIBOLD_20
+  #define HR_RID_M  RESOURCE_ID_FONT_ARCHIVO_SEMIBOLD_28
+  #define HR_RID_L  RESOURCE_ID_FONT_ARCHIVO_SEMIBOLD_36
   #define HEART_R     5
   #define HEART_TRI   10
+  #define HEART_R_M   8
+  #define HEART_TRI_M 15
+  #define HEART_R_L   11
+  #define HEART_TRI_L 20
+  #define LAY_CLK_TOP 8
+  #define LAY_CLK_BOT 64
+  #define LAY_HR_MIN  18
+  #define LAY_ROW     28
+  #define LAY_SIDE    22      // round: keep rows inside the circle
+  #define LAY_NAME_DY 8
+  #define LAY_LIST_BOTTOM 146 // round: anchor above the narrow bottom corners
 #elif defined(PBL_PLATFORM_BASALT)
+  #define HR_SCALE 0
   #define CLK_RID  RESOURCE_ID_FONT_ARCHIVO_BOLD_44
   #define TIME_RID RESOURCE_ID_FONT_ARCHIVO_BOLD_22
   #define NAME_RID RESOURCE_ID_FONT_ARCHIVO_SEMIBOLD_14
   #define HR_RID   RESOURCE_ID_FONT_ARCHIVO_SEMIBOLD_15
+  #define HEART_R     5
+  #define HEART_TRI   9
   #define LAY_CLK_TOP 6
   #define LAY_HR_TOP  54
   #define LAY_HR_CAP  9
   #define LAY_DIV_Y   80
   #define LAY_ROW     26
   #define LAY_SIDE    7
-  #define LAY_BOT     6
   #define LAY_NAME_DY 8
-  #define LAY_TOPANCHOR 0
+  #define LAY_LIST_BOTTOM 162
+#else   /* aplite / diorite -- 1-bit, 144x168, system fonts (no Archivo bundled) */
+  #define HR_SCALE 0
   #define HEART_R     5
   #define HEART_TRI   9
-#else   /* aplite / diorite -- 1-bit, 144x168, system fonts (no Archivo bundled) */
   #define LAY_CLK_TOP 6
   #define LAY_HR_TOP  54
   #define LAY_HR_CAP  11
   #define LAY_DIV_Y   80
   #define LAY_ROW     26
   #define LAY_SIDE    7
-  #define LAY_BOT     6
   #define LAY_NAME_DY 5
-  #define LAY_TOPANCHOR 0
-  #define HEART_R     5
-  #define HEART_TRI   9
+  #define LAY_LIST_BOTTOM 162
 #endif
 
-#define HEART_LOBE_R HEART_R
-#define HEART_HALF_W (2 * HEART_R)        // lobe centre (±R) + lobe radius (R) = ±2R
-#define HEART_W      (4 * HEART_R)
+#if HR_SCALE
+  #define NTIER 3
+  static const int TIER_LOBE[NTIER] = { HEART_R, HEART_R_M, HEART_R_L };
+  static const int TIER_TRI[NTIER]  = { HEART_TRI, HEART_TRI_M, HEART_TRI_L };
+#else
+  #define NTIER 1
+  static const int TIER_LOBE[NTIER] = { HEART_R };
+  static const int TIER_TRI[NTIER]  = { HEART_TRI };
+#endif
 
-// Heart path (lower triangle; the two lobes are circles) is built in init()
-// from the per-platform HEART_R / HEART_TRI above.
-static GPoint    s_heart_pts[3];
-static GPathInfo s_heart_info = { .num_points = 3, .points = NULL };
+// Heart paths (lower triangle; lobes are circles) and heart-rate fonts -- one
+// per HR tier -- built/loaded in init().
+static GPath    *s_heart[NTIER];
+static GPoint    s_heart_pts[NTIER][3];
+static GPathInfo s_heart_info[NTIER];
+static GFont     s_hr[NTIER];
 
 static char s_home_city[NAME_LEN] = "LOCAL";
 
@@ -196,13 +216,14 @@ static int day_diff(const struct tm *city, const struct tm *home) {
   return 0;
 }
 
-// Draw a small heart centred (horizontally) on its lobes at `origin`.
-static void draw_heart(GContext *ctx, GPoint origin) {
+// Draw a heart (accent colour) centred horizontally on its lobes at `origin`,
+// using the given lobe radius and pre-built triangle path (one per HR tier).
+static void draw_heart(GContext *ctx, GPoint origin, int lobe_r, GPath *path) {
   graphics_context_set_fill_color(ctx, ACCENT_COLOR);
-  gpath_move_to(s_heart_path, origin);
-  gpath_draw_filled(ctx, s_heart_path);
-  graphics_fill_circle(ctx, GPoint(origin.x - HEART_LOBE_R, origin.y), HEART_LOBE_R);
-  graphics_fill_circle(ctx, GPoint(origin.x + HEART_LOBE_R, origin.y), HEART_LOBE_R);
+  gpath_move_to(path, origin);
+  gpath_draw_filled(ctx, path);
+  graphics_fill_circle(ctx, GPoint(origin.x - lobe_r, origin.y), lobe_r);
+  graphics_fill_circle(ctx, GPoint(origin.x + lobe_r, origin.y), lobe_r);
 }
 
 // Most recent heart rate in BPM, or 0 if unavailable / no reading yet.
@@ -267,114 +288,147 @@ static void canvas_update(Layer *layer, GContext *ctx) {
   graphics_context_set_fill_color(ctx, GColorBlack);
   graphics_fill_rect(ctx, b, 0, GCornerNone);
 
+  // --- Collect the visible cities first (the HR line + divider size to the
+  //     space they leave) -------------------------------------------------
+  const int row_pitch = LAY_ROW;
+  const int left  = LAY_SIDE;
+  const int right = w - LAY_SIDE;
+  GFont mfont = fonts_get_system_font(FONT_KEY_GOTHIC_14);
+
+  // Capacity: the list bottom-anchors to LAY_LIST_BOTTOM; list_top can rise no
+  // higher than the floor (which reserves the clock zone + a minimum HR zone on
+  // the scaling platforms, or sits just below the fixed divider otherwise).
+#if HR_SCALE
+  const int list_floor = LAY_CLK_BOT + LAY_HR_MIN + 4;
+#else
+  const int list_floor = LAY_DIV_Y + 4;
+#endif
+  const int max_rows = (LAY_LIST_BOTTOM - list_floor) / row_pitch;
+
+  // Pass 1: skip cities whose offset duplicates the device's own time; cap to
+  // capacity; note whether any visible row needs a +/-1 day marker.
+  int visible[MAX_CITIES] = {0};
+  int vis_n = 0;
+  for (int i = 0; i < s_city_count && vis_n < max_rows; i++) {
+    int delta = s_city_offsets[i] - home_offset;
+    if (delta < 0) { delta = -delta; }
+    if (delta < 60) { continue; }
+    visible[vis_n++] = i;
+  }
+
+  // Bottom-anchor the (shortened) list; the empty state reserves ~2 rows of
+  // space for its message. Clamp so it never rises into the clock/HR zone.
+  int list_top = LAY_LIST_BOTTOM - (vis_n > 0 ? vis_n : 2) * row_pitch;
+  if (list_top < list_floor) { list_top = list_floor; }
+
+  // On the scaling platforms the divider floats up to the list; fixed otherwise.
+#if HR_SCALE
+  const int divider_y = list_top - 4;
+#else
+  const int divider_y = LAY_DIV_Y;
+#endif
+
   // --- Big current-location clock (hero, white) --------------------------
-  // White is the key contrast fix. Per-platform Archivo size on the colour
-  // models; ROBOTO_BOLD_SUBSET_49 fallback on aplite/diorite.
   char big[12];
   fmt_time(&local, big, sizeof(big), false);
   graphics_context_set_text_color(ctx, GColorWhite);
+#if HR_SCALE
+  const int clk_h = LAY_CLK_BOT - LAY_CLK_TOP;
+#else
+  const int clk_h = LAY_HR_TOP - LAY_CLK_TOP;
+#endif
   graphics_draw_text(ctx, big, s_font_clock,
-                     GRect(0, LAY_CLK_TOP, w, LAY_HR_TOP - LAY_CLK_TOP),
+                     GRect(0, LAY_CLK_TOP, w, clk_h),
                      GTextOverflowModeFill, GTextAlignmentCenter, NULL);
 
-  // --- Heart-rate line: heart icon + "<bpm> BPM", centred as one group ----
+  // --- Heart-rate line: heart + "<bpm> BPM" as one centred group ---------
+  // On emery/chalk the tier (font + heart size) grows with the free space, and
+  // is stepped down if needed so the line always fits the HR-zone height.
   char hr[12];
   int bpm = current_heart_rate();
-  if (bpm > 0) {
-    snprintf(hr, sizeof(hr), "%d BPM", bpm);
-  } else {
-    strncpy(hr, "-- BPM", sizeof(hr));
+  if (bpm > 0) { snprintf(hr, sizeof(hr), "%d BPM", bpm); }
+  else         { strncpy(hr, "-- BPM", sizeof(hr)); }
+
+#if HR_SCALE
+  const int hr_zone_top = LAY_CLK_BOT;
+  const int hr_zone_h   = divider_y - LAY_CLK_BOT;
+  int free_rows = max_rows - vis_n;
+  if (free_rows < 0) { free_rows = 0; }
+  int tier = (free_rows >= 2) ? 2 : free_rows;
+  GSize hr_sz = graphics_text_layout_get_content_size(
+      hr, s_hr[tier], GRect(0, 0, w, 80), GTextOverflowModeFill, GTextAlignmentLeft);
+  while (tier > 0 && hr_sz.h > hr_zone_h) {        // shrink until it fits
+    tier--;
+    hr_sz = graphics_text_layout_get_content_size(
+        hr, s_hr[tier], GRect(0, 0, w, 80), GTextOverflowModeFill, GTextAlignmentLeft);
   }
-  const int hr_box_h = LAY_DIV_Y - LAY_HR_TOP;
-  const GSize hr_sz = graphics_text_layout_get_content_size(
-      hr, s_font_hr, GRect(0, 0, w, hr_box_h),
-      GTextOverflowModeFill, GTextAlignmentLeft);
-  const int hr_gap   = 6;
-  const int group_w  = HEART_W + hr_gap + hr_sz.w;
-  const int group_x  = (w - group_w) / 2;
-  // Centre the heart on the value's cap-height (not the baseline) so the icon
-  // and "72 BPM" read as one optical line.
-  draw_heart(ctx, GPoint(group_x + HEART_HALF_W, LAY_HR_TOP + LAY_HR_CAP));
+  const int text_y   = hr_zone_top + (hr_zone_h - hr_sz.h) / 2;
+  const int heart_cy = text_y + hr_sz.h / 2 - (TIER_TRI[tier] - TIER_LOBE[tier]) / 2;
+#else
+  const int tier = 0;
+  GSize hr_sz = graphics_text_layout_get_content_size(
+      hr, s_hr[tier], GRect(0, 0, w, 80), GTextOverflowModeFill, GTextAlignmentLeft);
+  const int text_y   = LAY_HR_TOP;
+  const int heart_cy = LAY_HR_TOP + LAY_HR_CAP;
+#endif
+  const int lobe    = TIER_LOBE[tier];
+  const int heart_w = 4 * lobe;
+  const int hr_gap  = lobe;
+  const int group_x = (w - (heart_w + hr_gap + hr_sz.w)) / 2;
+  draw_heart(ctx, GPoint(group_x + heart_w / 2, heart_cy), lobe, s_heart[tier]);
   graphics_context_set_text_color(ctx, GREY_COLOR);
-  graphics_draw_text(ctx, hr, s_font_hr,
-                     GRect(group_x + HEART_W + hr_gap, LAY_HR_TOP, hr_sz.w + 4, hr_box_h),
+  graphics_draw_text(ctx, hr, s_hr[tier],
+                     GRect(group_x + heart_w + hr_gap, text_y, hr_sz.w + 4, hr_sz.h + 6),
                      GTextOverflowModeFill, GTextAlignmentLeft, NULL);
 
   // --- Hairline divider (thin blue) --------------------------------------
-  const int divider_y = LAY_DIV_Y;
   graphics_context_set_stroke_color(ctx, ACCENT_COLOR);
-  graphics_draw_line(ctx, GPoint(LAY_SIDE, divider_y), GPoint(w - LAY_SIDE, divider_y));
-
-  // --- City list ---------------------------------------------------------
-  // Bottom-anchored on rectangular screens; top-anchored on round (chalk) so
-  // the rows stay in the wide middle band instead of clipping the corners.
-  const int row_pitch     = LAY_ROW;
-  const int bottom_margin = LAY_BOT;
-  const int list_top      = divider_y + 4;
-  const int left          = LAY_SIDE;
-  const int right         = w - LAY_SIDE;
-  GFont mfont             = fonts_get_system_font(FONT_KEY_GOTHIC_14);
-
-  // Pass 1: collect the cities that will actually be shown -- skip any whose
-  // offset duplicates the device's own time -- capped to what fits on screen.
-  // Also note whether any visible row needs a +/-1 day marker.
-  int visible[MAX_CITIES];
-  int vis_n = 0;
-  bool any_marker = false;
-  const int max_rows = (b.size.h - bottom_margin - list_top) / row_pitch;
-  for (int i = 0; i < s_city_count && vis_n < max_rows; i++) {
-    // Hide a city in the same zone as the device (it would duplicate the big
-    // clock). Tolerant compare: distinct zones differ by >= 15 min, so anything
-    // within a minute is "the same zone" and absorbs any rounding in the offset.
-    int delta = s_city_offsets[i] - home_offset;
-    if (delta < 0) { delta = -delta; }
-    if (delta < 60) {
-      continue;
-    }
-    const time_t   ce = now + s_city_offsets[i];
-    const struct tm ct = *gmtime(&ce);
-    if (day_diff(&ct, &local) != 0) { any_marker = true; }
-    visible[vis_n++] = i;
-  }
+  graphics_draw_line(ctx, GPoint(left, divider_y), GPoint(right, divider_y));
 
   if (vis_n == 0) {
     graphics_context_set_text_color(ctx, GREY_COLOR);
     graphics_draw_text(ctx, "Add cities from\nthe phone settings",
                        s_font_name,
-                       GRect(left, list_top + 6, right - left, 60),
+                       GRect(left, divider_y + 6, right - left, 60),
                        GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
     return;
   }
 
-  // Reserve exactly the measured width of "HH:MM" on the right (plus a day
-  // marker only when a row shows one); the name gets the remainder and
-  // ellipsizes on a single line. This keeps the (critical) time unclipped even
-  // on the 144px models, where a fixed percentage split would crop it.
+  // Reserve exactly the measured "HH:MM" width on the right for the time; each
+  // name gets the remainder (minus that row's day marker, if any) and
+  // ellipsizes on a single line. Keeps the time unclipped even at 144px, and
+  // only the row with a marker gives up name width.
   const int time_w = graphics_text_layout_get_content_size(
       "00:00", s_font_time, GRect(0, 0, w, 60),
       GTextOverflowModeFill, GTextAlignmentLeft).w;
-  const int mark_w = any_marker
-      ? graphics_text_layout_get_content_size("+0", mfont, GRect(0, 0, 40, 20),
-            GTextOverflowModeFill, GTextAlignmentLeft).w + 5
-      : 0;
-  int name_end = right - time_w - 4 - mark_w;
-  if (name_end < left + 24) { name_end = left + 24; }
   const int name_lh = graphics_text_layout_get_content_size(
       "Ag", s_font_name, GRect(0, 0, w, 60),
       GTextOverflowModeFill, GTextAlignmentLeft).h;
 
-  // Pass 2: position the block (top- or bottom-anchored), then draw rows down.
-  int y = LAY_TOPANCHOR ? list_top
-                        : (b.size.h - bottom_margin - vis_n * row_pitch);
-  if (y < list_top) { y = list_top; }
+  // Pass 2: draw the rows from the (bottom-anchored) list top downward.
+  int y = list_top;
 
   for (int k = 0; k < vis_n; k++) {
     const int i = visible[k];
     const time_t   city_epoch = now + s_city_offsets[i];
     const struct tm ct        = *gmtime(&city_epoch);
 
-    // City name (left) -- UPPERCASE, grey. Baseline nudged down to sit on the
-    // taller time's baseline.
+    // Time string + this row's +/-1 day-marker width (0 if same day).
+    char tbuf[12];
+    fmt_time(&ct, tbuf, sizeof(tbuf), true);
+    const int dd = day_diff(&ct, &local);
+    char mk[6] = "";
+    int mw = 0;
+    if (dd != 0) {
+      snprintf(mk, sizeof(mk), "%+d", dd);            // "+1" / "-1"
+      mw = graphics_text_layout_get_content_size(
+               mk, mfont, GRect(0, 0, 40, 18),
+               GTextOverflowModeFill, GTextAlignmentLeft).w + 3;
+    }
+    int name_end = right - time_w - 4 - mw;
+    if (name_end < left + 24) { name_end = left + 24; }
+
+    // City name (left) -- UPPERCASE, grey, single line, baseline-nudged.
     char nm[NAME_LEN];
     strncpy(nm, s_city_names[i], sizeof(nm) - 1);
     nm[sizeof(nm) - 1] = '\0';
@@ -386,25 +440,13 @@ static void canvas_update(Layer *layer, GContext *ctx) {
                        GRect(left, y + LAY_NAME_DY, name_end - left, name_lh),
                        GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
 
-    // City time (right, blue). The +1/-1 day marker (kept, per the owner) is
-    // drawn small and grey to its right so it doesn't compete with the time.
-    char tbuf[12];
-    fmt_time(&ct, tbuf, sizeof(tbuf), true);
-    const int dd = day_diff(&ct, &local);
-
-    int mw = 0;
-    if (dd != 0) {
-      char mk[6];
-      snprintf(mk, sizeof(mk), "%+d", dd);            // "+1" / "-1"
-      GSize ms = graphics_text_layout_get_content_size(
-          mk, mfont, GRect(0, 0, 40, 18), GTextOverflowModeFill, GTextAlignmentLeft);
-      mw = ms.w + 3;                                  // marker + small gap
+    // Day marker (small grey) at the far right, then the time (blue) left of it.
+    if (mk[0]) {
       graphics_context_set_text_color(ctx, GREY_COLOR);
       graphics_draw_text(ctx, mk, mfont,
-                         GRect(right - ms.w, y + LAY_NAME_DY + 2, ms.w + 2, 18),
+                         GRect(right - (mw - 3), y + LAY_NAME_DY + 2, mw, 18),
                          GTextOverflowModeFill, GTextAlignmentLeft, NULL);
     }
-
     graphics_context_set_text_color(ctx, ACCENT_COLOR);
     graphics_draw_text(ctx, tbuf, s_font_time,
                        GRect(name_end, y, (right - mw) - name_end, row_pitch),
@@ -508,19 +550,26 @@ static void init(void) {
   s_font_clock = fonts_load_custom_font(resource_get_handle(CLK_RID));
   s_font_time  = fonts_load_custom_font(resource_get_handle(TIME_RID));
   s_font_name  = fonts_load_custom_font(resource_get_handle(NAME_RID));
-  s_font_hr    = fonts_load_custom_font(resource_get_handle(HR_RID));
+  s_hr[0]      = fonts_load_custom_font(resource_get_handle(HR_RID));
+#if HR_SCALE
+  s_hr[1]      = fonts_load_custom_font(resource_get_handle(HR_RID_M));
+  s_hr[2]      = fonts_load_custom_font(resource_get_handle(HR_RID_L));
+#endif
 #else
   s_font_clock = fonts_get_system_font(FONT_KEY_ROBOTO_BOLD_SUBSET_49);
   s_font_time  = fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD);
   s_font_name  = fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD);
-  s_font_hr    = fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD);
+  s_hr[0]      = fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD);
 #endif
 
-  s_heart_pts[0] = GPoint(-HEART_HALF_W, 0);
-  s_heart_pts[1] = GPoint( HEART_HALF_W, 0);
-  s_heart_pts[2] = GPoint(0, HEART_TRI);
-  s_heart_info.points = s_heart_pts;
-  s_heart_path = gpath_create(&s_heart_info);
+  for (int t = 0; t < NTIER; t++) {
+    s_heart_pts[t][0] = GPoint(-2 * TIER_LOBE[t], 0);
+    s_heart_pts[t][1] = GPoint( 2 * TIER_LOBE[t], 0);
+    s_heart_pts[t][2] = GPoint(0, TIER_TRI[t]);
+    s_heart_info[t].num_points = 3;
+    s_heart_info[t].points = s_heart_pts[t];
+    s_heart[t] = gpath_create(&s_heart_info[t]);
+  }
 
   s_window = window_create();
   window_set_background_color(s_window, GColorBlack);
@@ -550,12 +599,16 @@ static void deinit(void) {
   tick_timer_service_unsubscribe();
   app_message_deregister_callbacks();
   window_destroy(s_window);
-  gpath_destroy(s_heart_path);
+  for (int t = 0; t < NTIER; t++) {
+    gpath_destroy(s_heart[t]);
+  }
 #ifdef PBL_COLOR
   fonts_unload_custom_font(s_font_clock);
   fonts_unload_custom_font(s_font_time);
   fonts_unload_custom_font(s_font_name);
-  fonts_unload_custom_font(s_font_hr);
+  for (int t = 0; t < NTIER; t++) {
+    fonts_unload_custom_font(s_hr[t]);
+  }
 #endif
 }
 

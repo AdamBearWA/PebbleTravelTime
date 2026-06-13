@@ -109,6 +109,22 @@
         },
         {
           "type": "font",
+          "name": "FONT_ARCHIVO_SEMIBOLD_28",
+          "file": "fonts/Archivo-SemiBold.ttf",
+          "characterRegex": "[0-9A-Za-z -]",
+          "trackingAdjust": 1,
+          "targetPlatforms": ["chalk", "emery"]
+        },
+        {
+          "type": "font",
+          "name": "FONT_ARCHIVO_SEMIBOLD_36",
+          "file": "fonts/Archivo-SemiBold.ttf",
+          "characterRegex": "[0-9A-Za-z -]",
+          "trackingAdjust": 1,
+          "targetPlatforms": ["chalk", "emery"]
+        },
+        {
+          "type": "font",
           "name": "FONT_ARCHIVO_SEMIBOLD_15",
           "file": "fonts/Archivo-SemiBold.ttf",
           "characterRegex": "[0-9A-Za-z -]",
