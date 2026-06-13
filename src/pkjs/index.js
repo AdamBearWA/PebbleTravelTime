@@ -265,7 +265,9 @@ function buildConfigPage(selected, accent) {
     'function nowIn(tz){try{return new Intl.DateTimeFormat([],{timeZone:tz,hour:"2-digit",minute:"2-digit"}).format(new Date());}catch(e){return "";}}' +
     'var selEl=document.getElementById("sel"),resEl=document.getElementById("results"),qEl=document.getElementById("q");' +
     'var ACC=JSON.parse(\'' + accJson + '\');' +
-    'var BANDS=[{n:"Blue",h:"#00AAFF"},{n:"Cyan",h:"#00FFFF"},{n:"Green",h:"#00FF00"},{n:"Yellow",h:"#FFFF00"},{n:"Orange",h:"#FF5500"},{n:"Red",h:"#FF0000"},{n:"Pink",h:"#FF55FF"},{n:"Purple",h:"#AA00FF"},{n:"White",h:"#FFFFFF"}];' +
+    // The Pebble Time 2 ships in four case/band combos (Black/Grey, Silver/Grey,
+    // Black/Red, Silver/Blue) -> three distinct band colours. Blue is the default.
+    'var BANDS=[{n:"Blue",h:"#00AAFF"},{n:"Red",h:"#FF0000"},{n:"Grey",h:"#AAAAAA"}];' +
     'var bandsEl=document.getElementById("bands");' +
     'function renderBands(){bandsEl.innerHTML="";BANDS.forEach(function(bd){var s=document.createElement("div");s.className="sw"+(bd.h.toLowerCase()===ACC.toLowerCase()?" on":"");s.style.background=bd.h;s.title=bd.n;s.addEventListener("click",function(){ACC=bd.h;renderBands();});bandsEl.appendChild(s);});}' +
     'function renderSel(){selEl.innerHTML="";if(!SEL.length){var d=document.createElement("div");d.className="empty";d.textContent="No cities yet. Search below to add some.";selEl.appendChild(d);}' +
