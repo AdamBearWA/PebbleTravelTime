@@ -5,10 +5,10 @@ name: Publish to Pebble appstore
 on:
   workflow_dispatch:
     inputs:
-      description:
-        description: 'Release notes / description'
+      release_notes:
+        description: 'Changelog / release notes for this version'
         required: true
-        default: 'New release'
+        default: 'Initial release — local time, heart rate, and up to 5 world-clock cities.'
 
 # Optional: gate this behind a protected environment with required reviewers.
 # environment: appstore
@@ -34,6 +34,17 @@ jobs:
       - name: Build
         run: pebble build
 
+      - name: Stage screenshots
+        # pebble publish infers each screenshot's platform from the filename
+        # before the first underscore, so copy our native-size PNGs to
+        # <platform>_*.png names. These are exact appstore dimensions, unlike
+        # the emulator's auto-capture (which is rejected as the wrong size).
+        run: |
+          mkdir -p /tmp/shots
+          for p in aplite basalt chalk diorite emery gabbro; do
+            cp "store/screenshots/$p.png" "/tmp/shots/${p}_screenshot.png"
+          done
+
       - name: Publish
         env:
           # Long-lived credential — the only real secret here.
@@ -41,7 +52,7 @@ jobs:
           # Public default baked into pebble-tool; not sensitive. Override via a
           # repo variable if your account uses a different Firebase project.
           FIREBASE_API_KEY: ${{ vars.PEBBLE_FIREBASE_API_KEY || 'AIzaSyBZ9Cdvwwv9At2lPmc8TxyyEqSXGXejGvc' }}
-          DESCRIPTION: ${{ github.event.inputs.description }}
+          RELEASE_NOTES: ${{ github.event.inputs.release_notes }}
         run: |
           set -euo pipefail
           # Exchange the long-lived refresh token for a fresh ~1h id_token.
@@ -55,6 +66,11 @@ jobs:
           fi
           echo "::add-mask::$ID_TOKEN"
           export PEBBLE_FIREBASE_ID_TOKEN="$ID_TOKEN"
-          # First run creates the listing (uses package.json displayName + this
-          # description); later runs add a new release of the same UUID.
-          pebble publish --non-interactive --description "$DESCRIPTION"
+          # --description only takes effect when the app is first created (it is
+          # ignored once the app exists; edit the live description in the
+          # dashboard). --release-notes is this version's changelog.
+          pebble publish --non-interactive \
+            --description "Shows local time and heart bpm as well as the time in up to 5 other cities" \
+            --release-notes "$RELEASE_NOTES" \
+            --source "https://github.com/AdamBearWA/PebbleTravelTime" \
+            --screenshots /tmp/shots/*.png

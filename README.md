@@ -94,14 +94,24 @@ to cut a release.
 Pick whichever you prefer:
 
 **A. From CI (recommended once set up).** Actions tab → *Publish to Pebble
-appstore* → *Run workflow* → enter a description. It builds and runs
-`pebble publish` using your stored token. Requires the one-time setup below.
+appstore* → *Run workflow* → enter the release notes (changelog). It builds and
+runs `pebble publish` with your stored token, uploading the native-size PNGs in
+`store/screenshots/` as the listing screenshots. Requires the one-time setup
+below.
 
 **B. From your machine.** With the Pebble CLI installed and logged in:
 ```sh
 pebble build
-pebble publish --description "What changed in this release"
+# Screenshot filenames must start with the platform (e.g. emery_*.png).
+pebble publish \
+  --release-notes "What changed in this release" \
+  --screenshots store/screenshots/emery.png store/screenshots/...
 ```
+
+> The app **description**, screenshots, and changelog can also be edited any
+> time on the [developer dashboard](https://developer.repebble.com/dashboard).
+> Note `--description` only applies when the app is *first created* — to change
+> the description of an existing listing, edit it on the dashboard.
 
 Either way, the **first** publish creates the appstore listing (title comes from
 `package.json` `displayName`); later publishes add a new release under the same
