@@ -1,8 +1,8 @@
 # Appstore listing — Travel Time
 
-Copy these fields into the developer portal (dev-portal.rebble.io / Core Devices
-portal) when publishing. Screenshots live in `store/screenshots/`; the release
-binary is `build/PebbleTravelTime.pbw`.
+Copy these fields into the Core Devices developer dashboard
+(<https://developer.repebble.com/dashboard>) when publishing. Screenshots live
+in `store/screenshots/`; the release binary is `build/PebbleTravelTime.pbw`.
 
 ## Core fields
 
@@ -12,9 +12,9 @@ binary is `build/PebbleTravelTime.pbw`.
 | Type / Category | Watchface |
 | UUID | `d1f9c2a4-7b3e-4f6a-9c2d-8e5a1b0f3c77` |
 | Developer | AdamBearWA |
-| Version | 1.0.0 |
+| Version | 1.0.2 (see `package.json`) |
 | Binary (`.pbw`) | `build/PebbleTravelTime.pbw` |
-| Source URL | _(optional — add your repo URL if public)_ |
+| Source URL | <https://github.com/AdamBearWA/PebbleTravelTime> |
 
 ## Tagline (short blurb)
 
@@ -33,16 +33,16 @@ remove with a tap. City times are DST-aware and stay correct as you travel.
 **Features**
 
 - Large, white local-time clock (24h or 12h — follows your watch setting)
-- Live heart rate with a band-blue heart that grows to fill the space when you
-  are tracking fewer cities
+- Live heart rate with an accent-coloured heart that grows to fill the space
+  when you are tracking fewer cities
 - Search & add *any* city / time zone from the phone settings, and rename them
   freely
 - DST-aware city times, with a subtle **+1 / −1** marker when a city is on a
   different calendar day
 - Automatically hides a city that is in your current time zone, so it never
   just duplicates the big clock
-- A single brand-blue accent on colour watches; crisp white-on-black on the
-  black-and-white models
+- A selectable accent colour (blue, red, or grey) on colour watches; crisp
+  white-on-black on the black-and-white models
 - Built for every Pebble — rectangular, round, B&W and colour
 
 Perfect for travellers, remote teams, and anyone with people in other time

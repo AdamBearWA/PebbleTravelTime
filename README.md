@@ -31,8 +31,8 @@ A world-clock watchface for the **Pebble Time 2** (and other Pebble models).
 
 | Piece | Role |
 |-------|------|
-| `src/c/main.c` | Renders the face. Big clock uses `localtime()`; each city is `gmtime(now + offset)`. Computes the device's own UTC offset to detect & hide duplicates. Reads heart rate via `HealthMetricHeartRateBPM`. Persists the city list so the face is correct before the phone connects. |
-| `src/pkjs/index.js` | PebbleKit JS. Hosts the settings page, computes each city's **current** UTC offset (DST-aware, via `Intl.DateTimeFormat`), and sends names + offsets to the watch over `AppMessage`. |
+| `src/c/main.c` | Renders the face. Big clock uses `localtime()`; each city is `gmtime(now + offset)`. Computes the device's own UTC offset to detect & hide duplicates. Reads heart rate via `HealthMetricHeartRateBPM`. Persists the city list and accent colour so the face is correct before the phone connects. |
+| `src/pkjs/index.js` | PebbleKit JS. Hosts the settings page, computes each city's **current** UTC offset (DST-aware, via `Intl.DateTimeFormat`), and sends names, offsets, and the chosen accent colour to the watch over `AppMessage`. |
 | `package.json` | App manifest. Targets `emery` (Pebble Time 2, 200×228 colour) plus the other platforms. Declares the `messageKeys`. |
 
 City offsets are recomputed by the phone every time the watchface launches
@@ -43,9 +43,9 @@ are picked up automatically.
 
 Open the Pebble mobile app → the watchface → **Settings**. Search for any city
 or timezone and tap to add it, tap a name to rename it, and remove with ×. Pick
-an **accent colour** from the Pebble Time 2 band-colour palette (defaults to
-blue; applies to the city times, the divider, and the heart on the colour
-models — the black-and-white models stay white). Tap **Save**. The settings
+an **accent colour** — blue, red, or grey, matching the Pebble Time 2 band
+colours (defaults to blue; applies to the city times, the divider, and the heart
+on the colour models — the black-and-white models stay white). Tap **Save**. The settings
 page is fully self-contained (served as a `data:` URI) — no web hosting
 required.
 
@@ -98,23 +98,23 @@ Pick whichever you prefer:
 
 **A. From CI (recommended once set up).** Actions tab → *Publish to Pebble
 appstore* → *Run workflow* → enter the release notes (changelog). It builds and
-runs `pebble publish` with your stored token, uploading the native-size PNGs in
-`store/screenshots/` as the listing screenshots. Requires the one-time setup
-below.
+runs `pebble publish` with your stored token, pushing the new `.pbw` and
+changelog. Requires the one-time setup below.
 
 **B. From your machine.** With the Pebble CLI installed and logged in:
 ```sh
 pebble build
-# Screenshot filenames must start with the platform (e.g. emery_*.png).
-pebble publish \
-  --release-notes "What changed in this release" \
-  --screenshots store/screenshots/emery.png store/screenshots/...
+pebble publish --no-gif-all-platforms --release-notes "What changed in this release"
 ```
 
-> The app **description**, screenshots, and changelog can also be edited any
-> time on the [developer dashboard](https://developer.repebble.com/dashboard).
-> Note `--description` only applies when the app is *first created* — to change
-> the description of an existing listing, edit it on the dashboard.
+> **Screenshots, icons, and the app description are managed on the
+> [developer dashboard](https://developer.repebble.com/dashboard), not by
+> `pebble publish`.** The appstore API only *appends* uploaded screenshots (the
+> CLI hardcodes `replaceScreenshots:false`), so the workflow deliberately skips
+> them (`--no-gif-all-platforms`, no `--screenshots`) to avoid duplicates —
+> upload them once on the dashboard (`store/screenshots/` holds the blue/red/grey
+> variants). Likewise `--description` only applies when the app is *first
+> created*; edit an existing listing's description on the dashboard.
 
 Either way, the **first** publish creates the appstore listing (title comes from
 `package.json` `displayName`); later publishes add a new release under the same
