@@ -12,6 +12,21 @@ A world-clock watchface for the **Pebble Time 2** (and other Pebble models).
 - A **heart icon + current BPM** is shown below the date (uses the Pebble Time 2
   heart-rate sensor; shows `--` until a reading is available).
 
+## Screenshots
+
+<table>
+  <tr>
+    <td align="center"><img src="store/screenshots/emery.png" width="200" alt="Travel Time on emery"><br><sub><b>emery</b><br>Pebble Time 2</sub></td>
+    <td align="center"><img src="store/screenshots/gabbro.png" width="200" alt="Travel Time on gabbro"><br><sub><b>gabbro</b><br>Pebble (round, colour)</sub></td>
+    <td align="center"><img src="store/screenshots/chalk.png" width="180" alt="Travel Time on chalk"><br><sub><b>chalk</b><br>Pebble Time Round</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="store/screenshots/basalt.png" width="144" alt="Travel Time on basalt"><br><sub><b>basalt</b><br>Pebble Time / Steel</sub></td>
+    <td align="center"><img src="store/screenshots/aplite.png" width="144" alt="Travel Time on aplite"><br><sub><b>aplite</b><br>Pebble / Pebble Steel</sub></td>
+    <td align="center"><img src="store/screenshots/diorite.png" width="144" alt="Travel Time on diorite"><br><sub><b>diorite</b><br>Pebble 2</sub></td>
+  </tr>
+</table>
+
 ## How it works
 
 | Piece | Role |
@@ -50,22 +65,56 @@ pebble install --phone <PHONE_IP> --logs
 The compiled `build/PebbleTravelTime.pbw` (named after the project directory)
 can also be side-loaded via the mobile app.
 
-## Releasing (CI/CD)
+## Releasing & publishing
 
-Two GitHub Actions workflows live in `.github/workflows/`:
+Two GitHub Actions workflows in `.github/workflows/` drive this. CI installs the
+Pebble SDK and runs `pebble build` for you, so you don't need a local toolchain
+to cut a release.
 
-- **`build.yml`** — builds the `.pbw` on every push/PR, and attaches it to a
-  GitHub Release when you push a `v*` tag (`git tag v1.0.0 && git push --tags`).
-  Needs no secrets.
-- **`publish.yml`** — manual trigger (Actions tab → *Publish to Pebble appstore*
-  → *Run workflow*). Builds, then uploads to the Core Devices appstore via
-  `pebble publish`.
+- **`build.yml`** — builds the `.pbw` on every push/PR; on a `v*` tag it also
+  attaches the binary to a GitHub Release. No secrets required.
+- **`publish.yml`** — manual trigger; builds and uploads to the Core Devices
+  (repebble) appstore via `pebble publish`. Requires the one-time token setup
+  in [Publishing to the repebble appstore](#publishing-to-the-repebble-appstore).
 
-**One-time setup for `publish.yml`:** the appstore uses Firebase auth. Generate
-a long-lived credential on your machine and store it as a repo secret:
+### 1. Cut a version (build + GitHub Release)
+
+1. Bump `version` in `package.json` (e.g. `1.0.0` → `1.1.0`) and commit it.
+2. Tag the commit and push the tag:
+   ```sh
+   git tag v1.1.0      # match the package.json version
+   git push origin main --tags
+   ```
+3. `build.yml` runs automatically: it builds and attaches `build/*.pbw`
+   (i.e. `PebbleTravelTime.pbw`) to a **GitHub Release** for that tag. The
+   binary is also available as a run **artifact** on every push, tag or not.
+
+### 2. Publish to the repebble appstore
+
+Pick whichever you prefer:
+
+**A. From CI (recommended once set up).** Actions tab → *Publish to Pebble
+appstore* → *Run workflow* → enter a description. It builds and runs
+`pebble publish` using your stored token. Requires the one-time setup below.
+
+**B. From your machine.** With the Pebble CLI installed and logged in:
+```sh
+pebble build
+pebble publish --description "What changed in this release"
+```
+
+Either way, the **first** publish creates the appstore listing (title comes from
+`package.json` `displayName`); later publishes add a new release under the same
+UUID. Listing copy, screenshots, and store metadata live in
+[`store/LISTING.md`](store/LISTING.md).
+
+#### Publishing to the repebble appstore
+
+For **option A** the appstore uses Firebase auth, so the workflow needs a
+long-lived credential. Generate it once on your machine:
 
 ```sh
-pebble login   # opens browser; use the same account as the dashboard
+pebble login   # opens browser; use the same account as the developer dashboard
 ```
 
 This caches credentials at `<persist-dir>/oauth_firebase/firebase_oauth_storage.json`,
@@ -77,15 +126,12 @@ it's `~/Library/Application Support/Pebble SDK`. Pull the refresh token out:
 python3 -c "import json,glob;print(json.load(open(glob.glob('$HOME/.local/share/pebble-sdk/oauth_firebase/firebase_oauth_storage.json')[0]))['refresh_token'])"
 ```
 
-Copy that `refresh_token` value into a GitHub Actions secret
-named `PEBBLE_FIREBASE_REFRESH_TOKEN` (Settings → Secrets and variables →
-Actions). The workflow exchanges it for a short-lived `id_token` on each run.
-The refresh token grants full publish access to your account — treat it like a
-password, and consider gating the workflow behind a protected environment.
-
-> Note: the SDK-install step (`pebble sdk install latest`) is the line most
-> likely to need adjusting on the first CI run — confirm against `pebble sdk
-> --help` if the build fails to find the toolchain.
+Copy that `refresh_token` value into a GitHub Actions secret named
+`PEBBLE_FIREBASE_REFRESH_TOKEN` (Settings → Secrets and variables → Actions).
+The workflow exchanges it for a short-lived `id_token` on each run. The refresh
+token grants full publish access to your account — treat it like a password,
+and consider gating `publish.yml` behind a protected environment with required
+reviewers (there's a commented-out `environment:` line ready for it).
 
 ## Notes / possible extensions
 
