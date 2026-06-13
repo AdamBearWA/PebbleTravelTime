@@ -23,13 +23,16 @@
 #define PK_CITY_COUNT  3
 #define PK_NAMES       4
 #define PK_OFFSETS     5
+#define PK_ACCENT      6
 
 static Window *s_window;
 static Layer  *s_canvas;
 
-// "01b · Quiet in colour": the single brand-blue accent (matched to the owner's
-// blue watch band). Snaps to GColorVividCerulean on the 64-colour models; falls
-// back to white on the 1-bit models (aplite/diorite) so they stay white-on-black.
+// "01b · Quiet in colour": the brand-blue accent (matched to the owner's blue
+// watch band), now user-selectable from the phone on the 64-colour models. The
+// default snaps to GColorVividCerulean; the 1-bit models (aplite/diorite) ignore
+// the choice and stay white-on-black.
+#define DEFAULT_ACCENT_HEX 0x00AAFF                 // GColorVividCerulean
 #define ACCENT_COLOR PBL_IF_COLOR_ELSE(GColorVividCerulean, GColorWhite)
 #define GREY_COLOR   PBL_IF_COLOR_ELSE(GColorLightGray, GColorWhite)
 
@@ -171,6 +174,12 @@ static int  s_city_count = 0;
 static char s_city_names[MAX_CITIES][NAME_LEN];
 static int  s_city_offsets[MAX_CITIES];   // seconds east of UTC
 
+// Runtime accent colour. User-selectable on the colour models; always white on
+// the 1-bit models. Set from persist/AppMessage in terms of an 0xRRGGBB hex,
+// snapped to the device palette via GColorFromHEX.
+static GColor   s_accent_color;
+static int32_t  s_accent_hex = DEFAULT_ACCENT_HEX;
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -240,7 +249,7 @@ static int day_diff(const struct tm *city, const struct tm *home) {
 // Draw a heart (accent colour) centred horizontally on its lobes at `origin`,
 // using the given lobe radius and pre-built triangle path (one per HR tier).
 static void draw_heart(GContext *ctx, GPoint origin, int lobe_r, GPath *path) {
-  graphics_context_set_fill_color(ctx, ACCENT_COLOR);
+  graphics_context_set_fill_color(ctx, s_accent_color);
   gpath_move_to(path, origin);
   gpath_draw_filled(ctx, path);
   graphics_fill_circle(ctx, GPoint(origin.x - lobe_r, origin.y), lobe_r);
@@ -267,9 +276,20 @@ static void save_state(void) {
   persist_write_int(PK_CITY_COUNT, s_city_count);
   persist_write_data(PK_NAMES, s_city_names, sizeof(s_city_names));
   persist_write_data(PK_OFFSETS, s_city_offsets, sizeof(s_city_offsets));
+  persist_write_int(PK_ACCENT, s_accent_hex);
 }
 
 static void load_state(void) {
+  // Accent: default to the brand blue, then take the persisted choice. On the
+  // 1-bit models ACCENT_COLOR is white and the user choice never applies.
+  s_accent_color = ACCENT_COLOR;
+#ifdef PBL_COLOR
+  if (persist_exists(PK_ACCENT)) {
+    s_accent_hex = persist_read_int(PK_ACCENT);
+  }
+  s_accent_color = GColorFromHEX(s_accent_hex);
+#endif
+
   if (persist_exists(PK_HOME_CITY)) {
     persist_read_string(PK_HOME_CITY, s_home_city, NAME_LEN);
   }
@@ -402,8 +422,8 @@ static void canvas_update(Layer *layer, GContext *ctx) {
                      GRect(group_x + heart_w + hr_gap, text_y, hr_sz.w + 4, hr_sz.h + 6),
                      GTextOverflowModeFill, GTextAlignmentLeft, NULL);
 
-  // --- Hairline divider (thin blue) --------------------------------------
-  graphics_context_set_stroke_color(ctx, ACCENT_COLOR);
+  // --- Hairline divider (thin accent) ------------------------------------
+  graphics_context_set_stroke_color(ctx, s_accent_color);
   graphics_draw_line(ctx, GPoint(left, divider_y), GPoint(right, divider_y));
 
   if (vis_n == 0) {
@@ -468,7 +488,7 @@ static void canvas_update(Layer *layer, GContext *ctx) {
                          GRect(right - (mw - 3), y + LAY_NAME_DY + 2, mw, 18),
                          GTextOverflowModeFill, GTextAlignmentLeft, NULL);
     }
-    graphics_context_set_text_color(ctx, ACCENT_COLOR);
+    graphics_context_set_text_color(ctx, s_accent_color);
     graphics_draw_text(ctx, tbuf, s_font_time,
                        GRect(name_end, y, (right - mw) - name_end, row_pitch),
                        GTextOverflowModeFill, GTextAlignmentRight, NULL);
@@ -487,6 +507,18 @@ static void inbox_received(DictionaryIterator *iter, void *context) {
     strncpy(s_home_city, home->value->cstring, NAME_LEN - 1);
     s_home_city[NAME_LEN - 1] = '\0';
   }
+
+  // Accent colour (0xRRGGBB). Handled independently of the city lists so a
+  // colour-only update still applies. Ignored on the 1-bit models (stay white).
+#ifdef PBL_COLOR
+  Tuple *accent = dict_find(iter, MESSAGE_KEY_AccentColor);
+  if (accent) {
+    s_accent_hex = accent->value->int32;
+    s_accent_color = GColorFromHEX(s_accent_hex);
+    persist_write_int(PK_ACCENT, s_accent_hex);
+    if (s_canvas) { layer_mark_dirty(s_canvas); }
+  }
+#endif
 
   Tuple *names   = dict_find(iter, MESSAGE_KEY_CityNames);
   Tuple *offsets = dict_find(iter, MESSAGE_KEY_CityOffsets);

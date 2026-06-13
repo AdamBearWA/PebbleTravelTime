@@ -44,6 +44,11 @@ var CITIES = [
 // Cities selected on first run, before the user opens settings.
 var DEFAULT_SELECTION = ['Perth', 'Brisbane', 'Sydney', 'Wanaka'];
 
+// Accent colour. Selectable from the settings page (a palette of Pebble Time 2
+// band colours); defaults to the brand blue (GColorVividCerulean). Sent to the
+// watch as a 0xRRGGBB integer. Only applies on the colour models.
+var DEFAULT_ACCENT = '#00AAFF';
+
 // --- Intl safety detection --------------------------------------------------
 //
 // The Pebble emulator's JS engine (pypkjs / STPyV8) ships without working ICU
@@ -163,6 +168,15 @@ function saveSelection(sel) {
   try { localStorage.setItem('cities', JSON.stringify(sel)); } catch (e) { /* ignore */ }
 }
 
+function loadAccent() {
+  try { var a = localStorage.getItem('accent'); if (a) { return a; } } catch (e) { /* ignore */ }
+  return DEFAULT_ACCENT;
+}
+
+function saveAccent(hex) {
+  try { localStorage.setItem('accent', hex); } catch (e) { /* ignore */ }
+}
+
 // --- send to watch ----------------------------------------------------------
 
 function sendConfig() {
@@ -181,7 +195,8 @@ function sendConfig() {
     HomeCity: homeCityLabel(),
     CityCount: names.length,
     CityNames: names.join('|'),
-    CityOffsets: offs.join('|')
+    CityOffsets: offs.join('|'),
+    AccentColor: parseInt(loadAccent().slice(1), 16)   // '#00AAFF' -> 0x00AAFF
   };
 
   Pebble.sendAppMessage(dict, function () {
@@ -198,10 +213,11 @@ function sendConfig() {
 // browsers without supportedValuesOf. Note: no apostrophes in any page text --
 // the page source is embedded inside a single-quoted JS string here.
 
-function buildConfigPage(selected) {
+function buildConfigPage(selected, accent) {
   // Escape a JSON blob so it can sit safely inside the single-quoted page source.
   function esc(s) { return s.replace(/\\/g, '\\\\').replace(/'/g, "\\'"); }
   var selJson   = esc(JSON.stringify(selected));
+  var accJson   = esc(JSON.stringify(accent || DEFAULT_ACCENT));
   var fbZonesJson = esc(JSON.stringify(CITIES.map(function (c) {
     return { name: c.name, tz: c.tz };
   })));
@@ -227,10 +243,14 @@ function buildConfigPage(selected) {
     '#save{position:fixed;bottom:0;left:0;right:0;border:0;background:#0a86c8;color:#fff;font-size:18px;padding:16px;width:100%}' +
     '#results{margin-bottom:72px}' +
     '.empty{padding:10px 16px;color:#aaa;font-size:14px}' +
+    '.bands{display:flex;flex-wrap:wrap;gap:12px;padding:12px 16px;background:#fff;border-bottom:1px solid #e2e2e2}' +
+    '.sw{width:38px;height:38px;border-radius:19px;border:3px solid #fff;box-shadow:0 0 0 1px #ccc;cursor:pointer}' +
+    '.sw.on{border-color:#111;box-shadow:0 0 0 2px #111}' +
     '</style></head><body>' +
     '<header>Travel Time</header>' +
     '<p class="hint">Search for any city or timezone and tap to add it. Tap a name to rename it. A city in your current timezone is hidden on the watch. Up to 10.</p>' +
     '<div class="sec">Showing on watch</div><ul id="sel" class="sel"></ul>' +
+    '<div class="sec">Accent colour</div><div id="bands" class="bands"></div>' +
     '<input id="q" type="search" placeholder="Search cities (Tokyo, New York, Paris)" autocomplete="off">' +
     '<ul id="results" class="res"></ul>' +
     '<button id="save">Save</button>' +
@@ -244,6 +264,10 @@ function buildConfigPage(selected) {
     'function offFor(tz){try{var n=new Date();var f=new Intl.DateTimeFormat("en-US",{timeZone:tz,hour12:false,year:"numeric",month:"numeric",day:"numeric",hour:"numeric",minute:"numeric",second:"numeric"});var p={};f.formatToParts(n).forEach(function(x){p[x.type]=x.value;});var h=parseInt(p.hour,10)%24;var u=Date.UTC(p.year,p.month-1,p.day,h,p.minute,p.second);return Math.round((u-n.getTime())/60000)*60;}catch(e){return 0;}}' +
     'function nowIn(tz){try{return new Intl.DateTimeFormat([],{timeZone:tz,hour:"2-digit",minute:"2-digit"}).format(new Date());}catch(e){return "";}}' +
     'var selEl=document.getElementById("sel"),resEl=document.getElementById("results"),qEl=document.getElementById("q");' +
+    'var ACC=JSON.parse(\'' + accJson + '\');' +
+    'var BANDS=[{n:"Blue",h:"#00AAFF"},{n:"Cyan",h:"#00FFFF"},{n:"Green",h:"#00FF00"},{n:"Yellow",h:"#FFFF00"},{n:"Orange",h:"#FF5500"},{n:"Red",h:"#FF0000"},{n:"Pink",h:"#FF55FF"},{n:"Purple",h:"#AA00FF"},{n:"White",h:"#FFFFFF"}];' +
+    'var bandsEl=document.getElementById("bands");' +
+    'function renderBands(){bandsEl.innerHTML="";BANDS.forEach(function(bd){var s=document.createElement("div");s.className="sw"+(bd.h.toLowerCase()===ACC.toLowerCase()?" on":"");s.style.background=bd.h;s.title=bd.n;s.addEventListener("click",function(){ACC=bd.h;renderBands();});bandsEl.appendChild(s);});}' +
     'function renderSel(){selEl.innerHTML="";if(!SEL.length){var d=document.createElement("div");d.className="empty";d.textContent="No cities yet. Search below to add some.";selEl.appendChild(d);}' +
     'SEL.forEach(function(c,i){var li=document.createElement("li");' +
     'var nm=document.createElement("input");nm.className="nm";nm.value=c.name;nm.maxLength=20;' +
@@ -268,8 +292,8 @@ function buildConfigPage(selected) {
     'function getReturnTo(){var m=/[?&]return_to=([^&#]+)/.exec(location.href);return m?decodeURIComponent(m[1]):"pebblejs://close#";}' +
     'document.getElementById("save").addEventListener("click",function(){' +
     'var out=SEL.map(function(c){return {name:(c.name||disp(c.tz)).slice(0,20),tz:c.tz,off:offFor(c.tz)};});' +
-    'location.href=getReturnTo()+encodeURIComponent(JSON.stringify(out));});' +
-    'renderSel();' +
+    'location.href=getReturnTo()+encodeURIComponent(JSON.stringify({cities:out,accent:ACC}));});' +
+    'renderSel();renderBands();' +
     '</script></body></html>';
 
   return 'data:text/html,' + encodeURIComponent(html);
@@ -283,17 +307,23 @@ Pebble.addEventListener('ready', function () {
 });
 
 Pebble.addEventListener('showConfiguration', function () {
-  Pebble.openURL(buildConfigPage(loadSelection()));
+  Pebble.openURL(buildConfigPage(loadSelection(), loadAccent()));
 });
 
 Pebble.addEventListener('webviewclosed', function (e) {
   if (!e || !e.response) { return; }            // user cancelled
   try {
-    var chosen = JSON.parse(decodeURIComponent(e.response));
-    if (Array.isArray(chosen)) {
-      saveSelection(chosen);
-      sendConfig();
+    var parsed = JSON.parse(decodeURIComponent(e.response));
+    var chosen, accent;
+    if (Array.isArray(parsed)) {
+      chosen = parsed;                          // old cities-only payload
+    } else if (parsed && typeof parsed === 'object') {
+      chosen = parsed.cities;
+      accent = parsed.accent;
     }
+    if (Array.isArray(chosen)) { saveSelection(chosen); }
+    if (accent) { saveAccent(accent); }
+    sendConfig();
   } catch (err) {
     console.log('Travel Time: bad config response - ' + err);
   }

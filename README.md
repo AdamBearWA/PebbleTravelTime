@@ -41,10 +41,13 @@ are picked up automatically.
 
 ## Settings
 
-Open the Pebble mobile app → the watchface → **Settings**. Tick the cities you
-want and tap **Save**. The list defaults to New York / London / Tokyo on first
-run. The settings page is fully self-contained (served as a `data:` URI) — no
-web hosting required.
+Open the Pebble mobile app → the watchface → **Settings**. Search for any city
+or timezone and tap to add it, tap a name to rename it, and remove with ×. Pick
+an **accent colour** from the Pebble Time 2 band-colour palette (defaults to
+blue; applies to the city times, the divider, and the heart on the colour
+models — the black-and-white models stay white). Tap **Save**. The settings
+page is fully self-contained (served as a `data:` URI) — no web hosting
+required.
 
 ## Building
 
