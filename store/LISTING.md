@@ -67,9 +67,10 @@ Default (blue accent) — one per platform, native resolution:
 | gabbro  | Pebble (round, colour, 260)  | `store/screenshots/gabbro.png`  | 260×260 |
 
 Accent-colour variants for the **colour** platforms (basalt, chalk, emery,
-gabbro): `store/screenshots/<platform>-red.png` and `-grey.png`. The 1-bit
-models (aplite, diorite) render white-on-black with no accent, so they have no
-colour variants.
+gabbro): `store/screenshots/<platform>-red.png` and `-grey.png`. The chalk and
+gabbro variants are round (transparent corners), retinted from the round images
+(`<platform>-round.png`) to match those watches. The 1-bit models (aplite,
+diorite) render white-on-black with no accent, so they have no colour variants.
 
 ## Suggested keywords / tags
 
