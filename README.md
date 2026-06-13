@@ -49,6 +49,35 @@ pebble install --phone <PHONE_IP> --logs
 
 The compiled `build/travel-time.pbw` can also be side-loaded via the mobile app.
 
+## Releasing (CI/CD)
+
+Two GitHub Actions workflows live in `.github/workflows/`:
+
+- **`build.yml`** — builds the `.pbw` on every push/PR, and attaches it to a
+  GitHub Release when you push a `v*` tag (`git tag v1.0.0 && git push --tags`).
+  Needs no secrets.
+- **`publish.yml`** — manual trigger (Actions tab → *Publish to Pebble appstore*
+  → *Run workflow*). Builds, then uploads to the Core Devices appstore via
+  `pebble publish`.
+
+**One-time setup for `publish.yml`:** the appstore uses Firebase auth. Generate
+a long-lived credential on your machine and store it as a repo secret:
+
+```sh
+pebble login                                          # opens browser; use your dashboard account
+find ~ -name firebase_oauth_storage.json 2>/dev/null  # usually ~/.pebble-sdk/
+```
+
+Copy the `refresh_token` value from that JSON file into a GitHub Actions secret
+named `PEBBLE_FIREBASE_REFRESH_TOKEN` (Settings → Secrets and variables →
+Actions). The workflow exchanges it for a short-lived `id_token` on each run.
+The refresh token grants full publish access to your account — treat it like a
+password, and consider gating the workflow behind a protected environment.
+
+> Note: the SDK-install step (`pebble sdk install latest`) is the line most
+> likely to need adjusting on the first CI run — confirm against `pebble sdk
+> --help` if the build fails to find the toolchain.
+
 ## Notes / possible extensions
 
 - Cities are shown in the order they appear in the master list. Drag-to-reorder

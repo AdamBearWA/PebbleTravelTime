@@ -1,0 +1,43 @@
+name: Build
+
+# Builds the .pbw on every push/PR (sanity check) and, on a version tag,
+# attaches the binary to a GitHub Release.
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Install Pebble CLI + SDK
+        run: |
+          uv tool install pebble-tool
+          # First build auto-installs the SDK; do it explicitly so failures are clear.
+          # NOTE: verify this command against `pebble sdk --help` on first CI run —
+          # the exact SDK-install invocation is the most likely line to need a tweak.
+          pebble sdk install latest
+
+      - name: Build
+        run: pebble build
+
+      - name: Upload .pbw artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: travel-time-pbw
+          path: build/travel-time.pbw
+          if-no-files-found: error
+
+      - name: Attach .pbw to release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/travel-time.pbw

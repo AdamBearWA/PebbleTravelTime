@@ -1,0 +1,56 @@
+name: Publish to Pebble appstore
+
+# Manual trigger only — publishing is outward-facing, so it should be deliberate.
+# Requires a repo secret PEBBLE_FIREBASE_REFRESH_TOKEN (see README "Releasing").
+on:
+  workflow_dispatch:
+    inputs:
+      description:
+        description: 'Release notes / description'
+        required: true
+        default: 'New release'
+
+# Optional: gate this behind a protected environment with required reviewers.
+# environment: appstore
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Install Pebble CLI + SDK
+        run: |
+          uv tool install pebble-tool
+          pebble sdk install latest
+
+      - name: Build
+        run: pebble build
+
+      - name: Publish
+        env:
+          # Long-lived credential — the only real secret here.
+          REFRESH_TOKEN: ${{ secrets.PEBBLE_FIREBASE_REFRESH_TOKEN }}
+          # Public default baked into pebble-tool; not sensitive. Override via a
+          # repo variable if your account uses a different Firebase project.
+          FIREBASE_API_KEY: ${{ vars.PEBBLE_FIREBASE_API_KEY || 'AIzaSyBZ9Cdvwwv9At2lPmc8TxyyEqSXGXejGvc' }}
+          DESCRIPTION: ${{ github.event.inputs.description }}
+        run: |
+          set -euo pipefail
+          # Exchange the long-lived refresh token for a fresh ~1h id_token.
+          ID_TOKEN=$(curl -sf -X POST \
+            "https://securetoken.googleapis.com/v1/token?key=${FIREBASE_API_KEY}" \
+            -d "grant_type=refresh_token&refresh_token=${REFRESH_TOKEN}" \
+            | jq -r .id_token)
+          if [ -z "$ID_TOKEN" ] || [ "$ID_TOKEN" = "null" ]; then
+            echo "::error::Failed to mint Firebase id_token (refresh token expired/revoked?)"
+            exit 1
+          fi
+          echo "::add-mask::$ID_TOKEN"
+          export PEBBLE_FIREBASE_ID_TOKEN="$ID_TOKEN"
+          # First run creates the listing (uses package.json displayName + this
+          # description); later runs add a new release of the same UUID.
+          pebble publish --non-interactive --description "$DESCRIPTION"
