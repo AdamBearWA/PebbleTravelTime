@@ -44,14 +44,44 @@
           "file": "fonts/Archivo-Bold.ttf",
           "characterRegex": "[0-9:]",
           "trackingAdjust": -2,
-          "targetPlatforms": ["basalt", "chalk", "emery"]
+          "targetPlatforms": ["emery"]
+        },
+        {
+          "type": "font",
+          "name": "FONT_ARCHIVO_BOLD_54",
+          "file": "fonts/Archivo-Bold.ttf",
+          "characterRegex": "[0-9:]",
+          "trackingAdjust": -2,
+          "targetPlatforms": ["chalk"]
+        },
+        {
+          "type": "font",
+          "name": "FONT_ARCHIVO_BOLD_44",
+          "file": "fonts/Archivo-Bold.ttf",
+          "characterRegex": "[0-9:]",
+          "trackingAdjust": -1,
+          "targetPlatforms": ["basalt"]
         },
         {
           "type": "font",
           "name": "FONT_ARCHIVO_BOLD_28",
           "file": "fonts/Archivo-Bold.ttf",
           "characterRegex": "[0-9: +-]",
-          "targetPlatforms": ["basalt", "chalk", "emery"]
+          "targetPlatforms": ["emery"]
+        },
+        {
+          "type": "font",
+          "name": "FONT_ARCHIVO_BOLD_24",
+          "file": "fonts/Archivo-Bold.ttf",
+          "characterRegex": "[0-9: +-]",
+          "targetPlatforms": ["chalk"]
+        },
+        {
+          "type": "font",
+          "name": "FONT_ARCHIVO_BOLD_22",
+          "file": "fonts/Archivo-Bold.ttf",
+          "characterRegex": "[0-9: +-]",
+          "targetPlatforms": ["basalt"]
         },
         {
           "type": "font",
@@ -59,7 +89,15 @@
           "file": "fonts/Archivo-SemiBold.ttf",
           "characterRegex": "[A-Za-z .'-]",
           "trackingAdjust": 2,
-          "targetPlatforms": ["basalt", "chalk", "emery"]
+          "targetPlatforms": ["emery"]
+        },
+        {
+          "type": "font",
+          "name": "FONT_ARCHIVO_SEMIBOLD_14",
+          "file": "fonts/Archivo-SemiBold.ttf",
+          "characterRegex": "[A-Za-z .'-]",
+          "trackingAdjust": 0,
+          "targetPlatforms": ["basalt", "chalk"]
         },
         {
           "type": "font",
@@ -67,7 +105,15 @@
           "file": "fonts/Archivo-SemiBold.ttf",
           "characterRegex": "[0-9A-Za-z -]",
           "trackingAdjust": 1,
-          "targetPlatforms": ["basalt", "chalk", "emery"]
+          "targetPlatforms": ["chalk", "emery"]
+        },
+        {
+          "type": "font",
+          "name": "FONT_ARCHIVO_SEMIBOLD_15",
+          "file": "fonts/Archivo-SemiBold.ttf",
+          "characterRegex": "[0-9A-Za-z -]",
+          "trackingAdjust": 1,
+          "targetPlatforms": ["basalt"]
         }
       ]
     }
