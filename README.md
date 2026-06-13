@@ -64,11 +64,19 @@ Two GitHub Actions workflows live in `.github/workflows/`:
 a long-lived credential on your machine and store it as a repo secret:
 
 ```sh
-pebble login                                          # opens browser; use your dashboard account
-find ~ -name firebase_oauth_storage.json 2>/dev/null  # usually ~/.pebble-sdk/
+pebble login   # opens browser; use the same account as the dashboard
 ```
 
-Copy the `refresh_token` value from that JSON file into a GitHub Actions secret
+This caches credentials at `<persist-dir>/oauth_firebase/firebase_oauth_storage.json`,
+where `<persist-dir>` is `~/.pebble-sdk` if it exists, otherwise
+`$XDG_DATA_HOME/pebble-sdk` (defaults to `~/.local/share/pebble-sdk`); on macOS
+it's `~/Library/Application Support/Pebble SDK`. Pull the refresh token out:
+
+```sh
+python3 -c "import json,glob;print(json.load(open(glob.glob('$HOME/.local/share/pebble-sdk/oauth_firebase/firebase_oauth_storage.json')[0]))['refresh_token'])"
+```
+
+Copy that `refresh_token` value into a GitHub Actions secret
 named `PEBBLE_FIREBASE_REFRESH_TOKEN` (Settings → Secrets and variables →
 Actions). The workflow exchanges it for a short-lived `id_token` on each run.
 The refresh token grants full publish access to your account — treat it like a
