@@ -33,11 +33,12 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: travel-time-pbw
-          path: build/travel-time.pbw
+          # The SDK names the bundle after the project directory, so glob it.
+          path: build/*.pbw
           if-no-files-found: error
 
       - name: Attach .pbw to release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: build/travel-time.pbw
+          files: build/*.pbw

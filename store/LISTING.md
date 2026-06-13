@@ -2,7 +2,7 @@
 
 Copy these fields into the developer portal (dev-portal.rebble.io / Core Devices
 portal) when publishing. Screenshots live in `store/screenshots/`; the release
-binary is `build/travel-time.pbw`.
+binary is `build/PebbleTravelTime.pbw`.
 
 ## Core fields
 
@@ -13,7 +13,7 @@ binary is `build/travel-time.pbw`.
 | UUID | `d1f9c2a4-7b3e-4f6a-9c2d-8e5a1b0f3c77` |
 | Developer | AdamBearWA |
 | Version | 1.0.0 |
-| Binary (`.pbw`) | `build/travel-time.pbw` |
+| Binary (`.pbw`) | `build/PebbleTravelTime.pbw` |
 | Source URL | _(optional — add your repo URL if public)_ |
 
 ## Tagline (short blurb)

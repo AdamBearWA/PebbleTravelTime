@@ -47,7 +47,8 @@ pebble install --emulator emery --logs
 pebble install --phone <PHONE_IP> --logs
 ```
 
-The compiled `build/travel-time.pbw` can also be side-loaded via the mobile app.
+The compiled `build/PebbleTravelTime.pbw` (named after the project directory)
+can also be side-loaded via the mobile app.
 
 ## Releasing (CI/CD)
 
