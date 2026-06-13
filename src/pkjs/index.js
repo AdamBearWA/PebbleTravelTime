@@ -73,9 +73,10 @@ function detectIntlSafety() {
 // --- offset computation -----------------------------------------------------
 
 // Current UTC offset (seconds east of UTC) for an IANA timezone. DST-aware via
-// Intl on real devices; falls back to the fixed offset when Intl is unsafe.
-function offsetSeconds(tz, fbMinutes) {
-  if (USE_INTL) {
+// Intl on real devices; falls back to `fbSec` (a snapshot offset in seconds,
+// computed in the settings page where Intl works) when Intl is unsafe here.
+function offsetSeconds(tz, fbSec) {
+  if (USE_INTL && tz) {
     try {
       var now = new Date();
       var dtf = new Intl.DateTimeFormat('en-US', {
@@ -92,10 +93,10 @@ function offsetSeconds(tz, fbMinutes) {
       // otherwise drift by a second, breaking the watch's "same as local" test.
       return Math.round((asUTC - now.getTime()) / 60000) * 60;
     } catch (e) {
-      /* fall through to fixed offset */
+      /* fall through to the snapshot offset */
     }
   }
-  return (fbMinutes || 0) * 60;              // fallback: fixed offset, no DST
+  return fbSec || 0;                         // fallback: snapshot offset, no live DST
 }
 
 // The phone's own timezone name -> a short label for the big clock.
@@ -112,35 +113,68 @@ function homeCityLabel() {
 }
 
 // --- selection storage ------------------------------------------------------
+//
+// A selection is an array of { name, tz, off }:
+//   name : the label shown on the watch (editable -- defaults to the zone city)
+//   tz   : IANA timezone id (used to recompute the live, DST-aware offset)
+//   off  : snapshot offset in seconds, computed in the settings page; used as
+//          the fallback when Intl is unavailable (e.g. the emulator).
 
-function loadSelection() {
-  try {
-    var raw = localStorage.getItem('cities');
-    if (raw) { return JSON.parse(raw); }
-  } catch (e) { /* ignore */ }
-  return DEFAULT_SELECTION.slice();
+// Map a curated-list city name to a {name,tz,off} entry (for defaults + the
+// migration of the old name-only saved format).
+function cityFromName(name) {
+  for (var i = 0; i < CITIES.length; i++) {
+    if (CITIES[i].name === name) {
+      return { name: CITIES[i].name, tz: CITIES[i].tz, off: CITIES[i].fb * 60 };
+    }
+  }
+  return null;
 }
 
-function saveSelection(names) {
-  try { localStorage.setItem('cities', JSON.stringify(names)); } catch (e) { /* ignore */ }
+function defaultSelection() {
+  var out = [];
+  DEFAULT_SELECTION.forEach(function (n) {
+    var c = cityFromName(n);
+    if (c) { out.push(c); }
+  });
+  return out;
+}
+
+function loadSelection() {
+  var raw = null;
+  try { raw = localStorage.getItem('cities'); } catch (e) { /* ignore */ }
+  if (raw == null) { return defaultSelection(); }      // first run only
+  try {
+    var arr = JSON.parse(raw);
+    if (!Array.isArray(arr)) { return defaultSelection(); }
+    if (arr.length && typeof arr[0] === 'object' && arr[0] && arr[0].tz) {
+      return arr;                                       // new {name,tz,off} format
+    }
+    // Migrate the old format (array of plain city-name strings).
+    var out = [];
+    arr.forEach(function (n) { var c = cityFromName(n); if (c) { out.push(c); } });
+    return out;                                         // may be [] if user cleared all
+  } catch (e) {
+    return defaultSelection();
+  }
+}
+
+function saveSelection(sel) {
+  try { localStorage.setItem('cities', JSON.stringify(sel)); } catch (e) { /* ignore */ }
 }
 
 // --- send to watch ----------------------------------------------------------
 
 function sendConfig() {
-  detectIntlSafety();           // decide Intl-vs-fixed-offset before any Intl use
+  detectIntlSafety();           // decide Intl-vs-snapshot before any Intl use
   var selected = loadSelection();
   var names = [];
   var offs = [];
 
-  selected.forEach(function (name) {
-    for (var i = 0; i < CITIES.length; i++) {
-      if (CITIES[i].name === name) {
-        names.push(CITIES[i].name);
-        offs.push(String(offsetSeconds(CITIES[i].tz, CITIES[i].fb)));
-        break;
-      }
-    }
+  selected.forEach(function (c) {
+    if (!c || !c.name) { return; }
+    names.push(c.name);
+    offs.push(String(offsetSeconds(c.tz, c.off)));   // live via Intl, else snapshot
   });
 
   var dict = {
@@ -158,10 +192,19 @@ function sendConfig() {
 }
 
 // --- settings page (self-contained) -----------------------------------------
+//
+// Search the full IANA timezone database (Intl.supportedValuesOf) for any city,
+// tap to add, rename inline, remove with x. Falls back to the curated list on
+// browsers without supportedValuesOf. Note: no apostrophes in any page text --
+// the page source is embedded inside a single-quoted JS string here.
 
 function buildConfigPage(selected) {
-  var cityJson = JSON.stringify(CITIES.map(function (c) { return c.name; }));
-  var selJson = JSON.stringify(selected);
+  // Escape a JSON blob so it can sit safely inside the single-quoted page source.
+  function esc(s) { return s.replace(/\\/g, '\\\\').replace(/'/g, "\\'"); }
+  var selJson   = esc(JSON.stringify(selected));
+  var fbZonesJson = esc(JSON.stringify(CITIES.map(function (c) {
+    return { name: c.name, tz: c.tz };
+  })));
 
   var html =
     '<!DOCTYPE html><html><head><meta charset="utf-8">' +
@@ -170,36 +213,63 @@ function buildConfigPage(selected) {
     'body{font-family:-apple-system,Roboto,Helvetica,sans-serif;margin:0;background:#f4f4f4;color:#222}' +
     'header{background:#000;color:#fff;padding:16px;font-size:20px;font-weight:600}' +
     'p.hint{padding:10px 16px;margin:0;color:#666;font-size:13px}' +
+    '.sec{padding:8px 16px 4px;font-size:12px;color:#888;text-transform:uppercase;letter-spacing:.05em}' +
     'ul{list-style:none;margin:0;padding:0}' +
-    'li{display:flex;align-items:center;padding:14px 16px;border-bottom:1px solid #ddd;background:#fff}' +
-    'li label{flex:1;font-size:17px}' +
-    'input[type=checkbox]{width:22px;height:22px;margin-right:14px}' +
-    'button{position:fixed;bottom:0;left:0;right:0;border:0;background:#ff4700;color:#fff;' +
-    'font-size:18px;padding:16px;width:100%}' +
-    'ul{margin-bottom:64px}' +
+    'li{display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid #e2e2e2;background:#fff}' +
+    '.sel li .nm{flex:1;font-size:17px;border:0;background:transparent;color:#111;padding:4px 0}' +
+    '.sel li .tz{font-size:12px;color:#999;margin:0 10px;white-space:nowrap}' +
+    '.sel li .rm{border:0;background:#eee;color:#c00;font-size:18px;width:30px;height:30px;border-radius:15px;position:static}' +
+    '.res li{cursor:pointer}' +
+    '.res li .nm{flex:1;font-size:17px}' +
+    '.res li .tm{font-size:13px;color:#0a86c8;margin-left:10px}' +
+    '#q{box-sizing:border-box;width:calc(100% - 32px);margin:8px 16px;padding:12px;font-size:16px;' +
+    'border:1px solid #ccc;border-radius:8px}' +
+    '#save{position:fixed;bottom:0;left:0;right:0;border:0;background:#0a86c8;color:#fff;font-size:18px;padding:16px;width:100%}' +
+    '#results{margin-bottom:72px}' +
+    '.empty{padding:10px 16px;color:#aaa;font-size:14px}' +
     '</style></head><body>' +
     '<header>Travel Time</header>' +
-    '<p class="hint">Choose the cities to show beneath your local time. A city in your current timezone is hidden automatically.</p>' +
-    '<ul id="list"></ul>' +
+    '<p class="hint">Search for any city or timezone and tap to add it. Tap a name to rename it. A city in your current timezone is hidden on the watch. Up to 10.</p>' +
+    '<div class="sec">Showing on watch</div><ul id="sel" class="sel"></ul>' +
+    '<input id="q" type="search" placeholder="Search cities (Tokyo, New York, Paris)" autocomplete="off">' +
+    '<ul id="results" class="res"></ul>' +
     '<button id="save">Save</button>' +
     '<script>' +
-    'var CITIES=' + cityJson + ';' +
-    'var SEL=' + selJson + ';' +
-    'var list=document.getElementById("list");' +
-    'CITIES.forEach(function(name){' +
-    'var li=document.createElement("li");' +
-    'var cb=document.createElement("input");cb.type="checkbox";cb.value=name;' +
-    'cb.checked=SEL.indexOf(name)>=0;cb.id="c_"+name;' +
-    'var lb=document.createElement("label");lb.textContent=name;lb.htmlFor=cb.id;' +
-    'li.appendChild(cb);li.appendChild(lb);list.appendChild(li);});' +
-    // On a real phone the return URL is "pebblejs://close#"; the emulator
-    // passes its own via a ?return_to= query param. Honour whichever is given.
-    'function getReturnTo(){var m=/[?&]return_to=([^&#]+)/.exec(location.href);' +
-    'return m?decodeURIComponent(m[1]):"pebblejs://close#";}' +
+    'var SEL=JSON.parse(\'' + selJson + '\');' +
+    'var FB=JSON.parse(\'' + fbZonesJson + '\');' +
+    'var MAX=10;' +
+    'function disp(tz){return tz.split("/").pop().replace(/_/g," ");}' +
+    'function allZones(){try{if(Intl.supportedValuesOf){return Intl.supportedValuesOf("timeZone").map(function(z){return {tz:z,name:disp(z)};});}}catch(e){}return FB;}' +
+    'var ZL=allZones();' +
+    'function offFor(tz){try{var n=new Date();var f=new Intl.DateTimeFormat("en-US",{timeZone:tz,hour12:false,year:"numeric",month:"numeric",day:"numeric",hour:"numeric",minute:"numeric",second:"numeric"});var p={};f.formatToParts(n).forEach(function(x){p[x.type]=x.value;});var h=parseInt(p.hour,10)%24;var u=Date.UTC(p.year,p.month-1,p.day,h,p.minute,p.second);return Math.round((u-n.getTime())/60000)*60;}catch(e){return 0;}}' +
+    'function nowIn(tz){try{return new Intl.DateTimeFormat([],{timeZone:tz,hour:"2-digit",minute:"2-digit"}).format(new Date());}catch(e){return "";}}' +
+    'var selEl=document.getElementById("sel"),resEl=document.getElementById("results"),qEl=document.getElementById("q");' +
+    'function renderSel(){selEl.innerHTML="";if(!SEL.length){var d=document.createElement("div");d.className="empty";d.textContent="No cities yet. Search below to add some.";selEl.appendChild(d);}' +
+    'SEL.forEach(function(c,i){var li=document.createElement("li");' +
+    'var nm=document.createElement("input");nm.className="nm";nm.value=c.name;nm.maxLength=20;' +
+    'nm.addEventListener("input",function(){SEL[i].name=nm.value;});' +
+    'var tz=document.createElement("span");tz.className="tz";tz.textContent=disp(c.tz);' +
+    'var rm=document.createElement("button");rm.className="rm";rm.textContent="\\u00d7";' +
+    'rm.addEventListener("click",function(){SEL.splice(i,1);renderSel();renderRes();});' +
+    'li.appendChild(nm);li.appendChild(tz);li.appendChild(rm);selEl.appendChild(li);});}' +
+    'function has(tz){return SEL.some(function(s){return s.tz===tz;});}' +
+    'function renderRes(){var q=qEl.value.trim().toLowerCase();resEl.innerHTML="";if(!q){return;}' +
+    'var hits=[];for(var i=0;i<ZL.length&&hits.length<40;i++){var z=ZL[i];if(has(z.tz))continue;' +
+    'if((z.name+" "+z.tz).toLowerCase().indexOf(q)>=0)hits.push(z);}' +
+    'if(!hits.length){var d=document.createElement("div");d.className="empty";d.textContent="No matches. Try a major city or region.";resEl.appendChild(d);return;}' +
+    'hits.forEach(function(z){var li=document.createElement("li");' +
+    'var nm=document.createElement("span");nm.className="nm";nm.textContent=z.name;' +
+    'var tm=document.createElement("span");tm.className="tm";tm.textContent=nowIn(z.tz);' +
+    'li.appendChild(nm);li.appendChild(tm);' +
+    'li.addEventListener("click",function(){if(SEL.length>=MAX){alert("Up to "+MAX+" cities.");return;}' +
+    'SEL.push({name:z.name,tz:z.tz,off:offFor(z.tz)});qEl.value="";renderSel();renderRes();qEl.focus();});' +
+    'resEl.appendChild(li);});}' +
+    'qEl.addEventListener("input",renderRes);' +
+    'function getReturnTo(){var m=/[?&]return_to=([^&#]+)/.exec(location.href);return m?decodeURIComponent(m[1]):"pebblejs://close#";}' +
     'document.getElementById("save").addEventListener("click",function(){' +
-    'var chosen=[];CITIES.forEach(function(name){' +
-    'if(document.getElementById("c_"+name).checked){chosen.push(name);}});' +
-    'location.href=getReturnTo()+encodeURIComponent(JSON.stringify(chosen));});' +
+    'var out=SEL.map(function(c){return {name:(c.name||disp(c.tz)).slice(0,20),tz:c.tz,off:offFor(c.tz)};});' +
+    'location.href=getReturnTo()+encodeURIComponent(JSON.stringify(out));});' +
+    'renderSel();' +
     '</script></body></html>';
 
   return 'data:text/html,' + encodeURIComponent(html);
