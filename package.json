@@ -1,0 +1,68 @@
+{
+  "name": "travel-time",
+  "author": "adamn",
+  "version": "1.0.0",
+  "keywords": ["pebble-app"],
+  "private": true,
+  "dependencies": {},
+  "pebble": {
+    "displayName": "Travel Time",
+    "uuid": "d1f9c2a4-7b3e-4f6a-9c2d-8e5a1b0f3c77",
+    "sdkVersion": "3",
+    "enableMultiJS": true,
+    "targetPlatforms": [
+      "aplite",
+      "basalt",
+      "chalk",
+      "diorite",
+      "emery"
+    ],
+    "watchapp": {
+      "watchface": true
+    },
+    "messageKeys": [
+      "HomeCity",
+      "CityCount",
+      "CityNames",
+      "CityOffsets"
+    ],
+    "capabilities": [
+      "health"
+    ],
+    "resources": {
+      "media": [
+        {
+          "type": "font",
+          "name": "FONT_ARCHIVO_BOLD_68",
+          "file": "fonts/Archivo-Bold.ttf",
+          "characterRegex": "[0-9:]",
+          "trackingAdjust": -2,
+          "targetPlatforms": ["basalt", "chalk", "emery"]
+        },
+        {
+          "type": "font",
+          "name": "FONT_ARCHIVO_BOLD_28",
+          "file": "fonts/Archivo-Bold.ttf",
+          "characterRegex": "[0-9: +-]",
+          "targetPlatforms": ["basalt", "chalk", "emery"]
+        },
+        {
+          "type": "font",
+          "name": "FONT_ARCHIVO_SEMIBOLD_16",
+          "file": "fonts/Archivo-SemiBold.ttf",
+          "characterRegex": "[A-Za-z .'-]",
+          "trackingAdjust": 2,
+          "targetPlatforms": ["basalt", "chalk", "emery"]
+        },
+        {
+          "type": "font",
+          "name": "FONT_ARCHIVO_SEMIBOLD_20",
+          "file": "fonts/Archivo-SemiBold.ttf",
+          "characterRegex": "[0-9A-Za-z -]",
+          "trackingAdjust": 1,
+          "targetPlatforms": ["basalt", "chalk", "emery"]
+        }
+      ]
+    }
+  }
+}

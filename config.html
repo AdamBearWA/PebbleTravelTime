@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<!--
+  Standalone copy of the Travel Time settings page, for testing in the emulator:
+
+      pebble emu-app-config --emulator emery --file config.html
+
+  The watchface itself ships the same page as a self-contained data: URI inside
+  src/pkjs/index.js (that is what real phones use). This file exists only so the
+  emulator can serve it over http://localhost, which browsers/wslview can open
+  and which supports the return_to round-trip back to the watch.
+
+  Keep the CITIES list and DEFAULT_SELECTION in sync with src/pkjs/index.js.
+-->
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Travel Time</title>
+  <style>
+    body{font-family:-apple-system,Roboto,Helvetica,sans-serif;margin:0;background:#f4f4f4;color:#222}
+    header{background:#000;color:#fff;padding:16px;font-size:20px;font-weight:600}
+    p.hint{padding:10px 16px;margin:0;color:#666;font-size:13px}
+    ul{list-style:none;margin:0 0 64px 0;padding:0}
+    li{display:flex;align-items:center;padding:14px 16px;border-bottom:1px solid #ddd;background:#fff}
+    li label{flex:1;font-size:17px}
+    input[type=checkbox]{width:22px;height:22px;margin-right:14px}
+    button{position:fixed;bottom:0;left:0;right:0;border:0;background:#ff4700;color:#fff;font-size:18px;padding:16px;width:100%}
+  </style>
+</head>
+<body>
+  <header>Travel Time</header>
+  <p class="hint">Choose the cities to show beneath your local time. A city in your current timezone is hidden automatically.</p>
+  <ul id="list"></ul>
+  <button id="save">Save</button>
+  <script>
+    var CITIES = ['Honolulu','Los Angeles','Denver','Chicago','New York','Sao Paulo',
+      'London','Paris','Berlin','Cairo','Moscow','Dubai','Karachi','Mumbai','Dhaka',
+      'Bangkok','Singapore','Hong Kong','Beijing','Perth','Tokyo','Seoul','Brisbane',
+      'Sydney','Auckland','Wanaka'];
+    var SEL = ['Perth','Brisbane','Sydney','Wanaka'];
+
+    var list = document.getElementById('list');
+    CITIES.forEach(function (name) {
+      var li = document.createElement('li');
+      var cb = document.createElement('input');
+      cb.type = 'checkbox'; cb.value = name; cb.checked = SEL.indexOf(name) >= 0; cb.id = 'c_' + name;
+      var lb = document.createElement('label');
+      lb.textContent = name; lb.htmlFor = cb.id;
+      li.appendChild(cb); li.appendChild(lb); list.appendChild(li);
+    });
+
+    // Phone uses pebblejs://close#; emulator passes a ?return_to= query param.
+    function getReturnTo() {
+      var m = /[?&]return_to=([^&#]+)/.exec(location.href);
+      return m ? decodeURIComponent(m[1]) : 'pebblejs://close#';
+    }
+
+    document.getElementById('save').addEventListener('click', function () {
+      var chosen = [];
+      CITIES.forEach(function (name) {
+        if (document.getElementById('c_' + name).checked) { chosen.push(name); }
+      });
+      location.href = getReturnTo() + encodeURIComponent(JSON.stringify(chosen));
+    });
+  </script>
+</body>
+</html>
